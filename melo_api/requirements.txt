@@ -1,6 +1,9 @@
 fastapi
+uvicorn
 pydantic
+pydantic-settings
 groq
 SQLAlchemy
 asyncpg
 alembic
+psycopg2
