@@ -1,0 +1,6 @@
+fastapi
+pydantic
+groq
+SQLAlchemy
+asyncpg
+alembic
