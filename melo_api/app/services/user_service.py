@@ -1,9 +1,9 @@
 from uuid import UUID
 
+from schemas.user import UserCreate, UserSignIn
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...schemas.user import UserCreate, UserSignIn
 from ..core.security import hash_password, verify_password
 from ..models.user import User
 
@@ -34,9 +34,8 @@ async def create_user(
 
 
 async def logging_in_user(
-    db: AsyncSession,
-    user_id: UUID,
-    user_login: UserSignIn
+   db: AsyncSession,
+   user_login: UserSignIn,
 ) -> User:
     # Check if user does not exist on database 
     result = await db.execute(select(User).where(User.email == user_login.email))

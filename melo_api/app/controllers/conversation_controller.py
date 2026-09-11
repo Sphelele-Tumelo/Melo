@@ -1,9 +1,8 @@
 from uuid import UUID
 
 from app.services.conversation_service import create_conversation
+from schemas.conversation import ConversationCreate
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from ...schemas.conversation import ConversationCreate
 
 
 async def create_conversation_controller(

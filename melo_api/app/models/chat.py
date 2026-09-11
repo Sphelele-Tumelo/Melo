@@ -1,11 +1,11 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, Enum as SQLEnum, ForeignKey, Text
-from sqlalchemy.orm import Mapped, mapped_column
-
 from app.data.base import Base
+from sqlalchemy import DateTime, ForeignKey, Text
+from sqlalchemy import Enum as SQLEnum
+from sqlalchemy.orm import Mapped, mapped_column
 
 
 class MessageRole(str, Enum):
@@ -14,7 +14,7 @@ class MessageRole(str, Enum):
     SYSTEM = "system"
 
 
-class Message(Base):
+class Chat(Base):
     __tablename__ = "messages"
 
     id: Mapped[UUID] = mapped_column(
@@ -40,6 +40,6 @@ class Message(Base):
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=datetime.utcnow,
+        default=lambda: datetime.now(timezone.utc),
         nullable=False,
     )

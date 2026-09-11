@@ -1,10 +1,8 @@
 from uuid import UUID
 
 from app.models.conversation import Conversation
-from sqlalchemy import select
+from schemas.conversation import ConversationCreate
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from ...schemas.conversation import ConversationCreate
 
 
 async def create_conversation(

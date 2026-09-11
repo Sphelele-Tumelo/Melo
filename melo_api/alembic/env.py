@@ -4,9 +4,9 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from alembic import context
 from app.core.config import settings
 from app.data.base import Base
+from app.models.chat import Chat
 from app.models.conversation import Conversation
 from app.models.memory import Memory
-from app.models.message import Message
 from app.models.user import User
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
