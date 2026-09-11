@@ -1,7 +1,7 @@
 from uuid import UUID
 
-from app.core.enums import MeloModel
-from app.services.model_router import route_model
+from app.core.enum import MeloModel
+from app.services.model_router import get_model_provider
 from schemas.chat import ChatRequest
 
 
@@ -11,10 +11,13 @@ async def orchestrate_chat(
 ):
     user_message = chat_request.message
 
-    model = route_model(MeloModel.SWIFT)
+    provider = get_model_provider(MeloModel.SWIFT)
+
+    response = await provider.generate(user_message)
 
     return {
         "conversation_id": conversation_id,
         "message": user_message,
-        "model": model.value,
+        "model": MeloModel.SWIFT.value,
+        "response": response,
     }

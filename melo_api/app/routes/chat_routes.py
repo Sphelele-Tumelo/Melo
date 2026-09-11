@@ -3,7 +3,7 @@ from uuid import UUID
 from app.controllers.chat_controller import create_message_controller
 from app.data.database import get_db
 from fastapi import APIRouter, Depends, HTTPException, status
-from schemas.chat import MessageCreate
+from schemas.chat import ChatResponse, MessageCreate
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(tags=["Chat"])
@@ -14,6 +14,7 @@ DB_DEPENDENCY = Depends(get_db)
 @router.post(
     "/create_message",
     status_code=status.HTTP_201_CREATED,
+    response_model=ChatResponse,
 )
 async def create_message(
     conversation_id: UUID,
@@ -27,10 +28,7 @@ async def create_message(
             message_data=message_data,
         )
 
-        return {
-            "message": "Message created successfully",
-            "message_id": str(new_message.id),
-        }
+        return new_message
 
     except ValueError as e:
         raise HTTPException(

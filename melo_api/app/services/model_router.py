@@ -1,5 +1,11 @@
-from app.core.enums import MeloModel
+from app.core.enum import MeloModel
+from app.providers.base_provider import BaseModelProvider
+from app.providers.groq_provider import GroqProvider
 
 
-def route_model(model: MeloModel) -> MeloModel:
-    return model
+def get_model_provider(model: MeloModel) -> BaseModelProvider:
+
+    if model == MeloModel.SWIFT:
+        return GroqProvider()
+
+    raise ValueError(f"Unsupported Melo model: {model}")

@@ -6,7 +6,6 @@ from pydantic import BaseModel, Field
 
 
 class MessageCreate(BaseModel):
-    role: MessageRole
     content: str = Field(min_length=1)
 
 

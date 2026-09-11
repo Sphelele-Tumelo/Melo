@@ -1,9 +1,25 @@
-#groq provider
+from groq import Groq
 
+from app.core.config import settings
 from app.providers.base_provider import BaseModelProvider
 
 
 class GroqProvider(BaseModelProvider):
+
+    def __init__(self):
+        self.client = Groq(
+            api_key=settings.groq_api_key
+        )
+
     async def generate(self, prompt: str) -> str:
-        # Implementation for generating response with Groq
-        pass
+        response = self.client.chat.completions.create(
+            model="openai/gpt-oss-120b",
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt,
+                }
+            ],
+        )
+
+        return response.choices[0].message.content or ""
