@@ -39,12 +39,12 @@ async def logging_in_user(
 ) -> User:
     # Check if user does not exist on database 
     result = await db.execute(select(User).where(User.email == user_login.email))
-    not_existing_user = result.scalar_one_or_none()
-    if not_existing_user:
+    existing_user = result.scalar_one_or_none()
+    if existing_user is None:
         raise ValueError("User does not exist")
 
     # Check if the password is correct
-    if not verify_password(user_login.password, not_existing_user.password_hash):
+    if not verify_password(user_login.password, existing_user.password_hash):
         raise ValueError("Incorrect password")
     
-    return not_existing_user
+    return existing_user
