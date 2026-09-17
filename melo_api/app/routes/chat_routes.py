@@ -1,8 +1,5 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.controllers.chat_controller import (
     create_message_controller,
     delete_message_controller,
@@ -12,7 +9,9 @@ from app.controllers.chat_controller import (
 from app.core.dependencies import get_current_user
 from app.data.database import get_db
 from app.models.user import User
-from schemas.chat import ChatResponse, MessageCreate
+from fastapi import APIRouter, Depends, HTTPException, status
+from schemas.chat import ChatResponse, MessageCreate, MessageResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(tags=["Chat"])
 
@@ -43,22 +42,28 @@ async def create_message(
 
     except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
         )
 
 
-@router.get("/get_messages", status_code=status.HTTP_200_OK, response_model=list[ChatResponse])
+@router.get("/get_messages", status_code=status.HTTP_200_OK, response_model=list[MessageResponse])
 async def get_messages(
     conversation_id: UUID,
     db: AsyncSession = DB_DEPENDENCY,
     current_user: User = CURRENT_USER,
 ):
-    return await get_messages_controller(
-        db=db,
-        conversation_id=conversation_id,
-        user_id=current_user.id,
-    )
+    try:
+        return await get_messages_controller(
+            db=db,
+            conversation_id=conversation_id,
+            user_id=current_user.id,
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )
 
 @router.put("/update_message", status_code=status.HTTP_200_OK, response_model=ChatResponse)
 async def update_message(

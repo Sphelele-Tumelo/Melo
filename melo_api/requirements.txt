@@ -9,3 +9,5 @@ alembic
 psycopg2
 PyJWT
 supabase
+sentence-transformers
+chromadb

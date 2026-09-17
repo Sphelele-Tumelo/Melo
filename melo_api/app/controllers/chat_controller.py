@@ -46,6 +46,7 @@ async def update_message_controller(
 
     return await update_message(
         db=db,
+        conversation_id=conversation_id,
         message_id=message_id,
         user_id=user_id,
         content=message_data.content,
@@ -59,6 +60,7 @@ async def delete_message_controller(
 ):
     return await delete_message(
         db=db,
+        conversation_id=conversation_id,
         message_id=message_id,
         user_id=user_id,
     )

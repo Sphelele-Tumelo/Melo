@@ -124,6 +124,7 @@ async def get_messages(
 
 async def update_message(
     db: AsyncSession,
+    conversation_id: UUID,
     message_id: UUID,
     user_id: UUID,
     content: str,
@@ -137,6 +138,7 @@ async def update_message(
         )
         .where(
             Chat.id == message_id,
+            Chat.conversation_id == conversation_id,
             Conversation.user_id == user_id,
         )
     )
@@ -161,6 +163,7 @@ async def update_message(
 
 async def delete_message(
     db: AsyncSession,
+    conversation_id: UUID,
     message_id: UUID,
     user_id: UUID,
 ) -> None:
@@ -173,6 +176,7 @@ async def delete_message(
         )
         .where(
             Chat.id == message_id,
+            Chat.conversation_id == conversation_id,
             Conversation.user_id == user_id,
         )
     )
