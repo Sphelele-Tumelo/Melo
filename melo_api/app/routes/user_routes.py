@@ -1,9 +1,10 @@
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from app.controllers.user_controller import (
     create_user_controller,
     logging_in_user_controller,
 )
+from app.services.auth_service import get_current_user_id
 from fastapi import APIRouter, Depends, HTTPException, status
 from schemas.user import UserCreate, UserSignIn
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -68,3 +69,8 @@ async def sign_in(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
+
+
+@router.get("/me", status_code=status.HTTP_200_OK)
+async def get_me(user_id: UUID = Depends(get_current_user_id)):
+    return {"user_id": str(user_id)}

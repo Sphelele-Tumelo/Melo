@@ -1,9 +1,14 @@
 from uuid import UUID
 
+from app.data.chroma import ChromaDatabase
 from app.models.memory import Memory
+from app.services.embeddings_service import EmbeddingService
 from schemas.memory import MemoryCreate, MemoryUpdate
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+chroma = ChromaDatabase()
+embedding_service = EmbeddingService()
 
 
 async def create_memory(
@@ -23,8 +28,19 @@ async def create_memory(
     await db.commit()
     await db.refresh(memory)
 
-    return memory
+    embedding = embedding_service.generate_embedding(
+        memory.content
+    )
 
+    chroma.add_memory(
+        memory_id=str(memory.id),
+        user_id=str(memory.user_id),
+        content=memory.content,
+        embedding=embedding,
+        memory_type=memory.memory_type,
+    )
+
+    return memory
 
 async def get_memories(
     db: AsyncSession,
@@ -83,6 +99,15 @@ async def update_memory(
     await db.commit()
     await db.refresh(memory)
 
+    embedding = embedding_service.generate_embedding(memory.content)
+    chroma.update_memory(
+        memory_id=str(memory.id),
+        user_id=str(memory.user_id),
+        content=memory.content,
+        embedding=embedding,
+        memory_type=memory.memory_type,
+    )
+
     return memory
 
 
@@ -105,5 +130,6 @@ async def delete_memory(
         raise ValueError("Memory not found")
 
     await db.delete(memory)
-
     await db.commit()
+
+    chroma.delete_memory(memory_id=str(memory_id))

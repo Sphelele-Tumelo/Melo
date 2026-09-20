@@ -11,13 +11,15 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
+    "axios": "^1.20.0",
     "framer-motion": "^13.2.0",
     "geist": "^1.7.2",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-icons": "^5.7.0",
     "react-router-dom": "^7.18.3",
-    "tailwindcss": "^4.3.3"
+    "tailwindcss": "^4.3.3",
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
     "@babel/core": "^7.29.7",

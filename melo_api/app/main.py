@@ -8,12 +8,16 @@ from .routes.conversation_routes import router as conversation_router
 from .routes.memory_routes import router as memory_router
 from .routes.user_routes import router as user_router
 
+
 app = FastAPI()
 
 #CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:5173/",
+        "http://localhost:8000"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
