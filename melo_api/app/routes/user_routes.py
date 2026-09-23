@@ -1,18 +1,20 @@
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 from app.controllers.user_controller import (
     create_user_controller,
     logging_in_user_controller,
 )
-from app.services.auth_service import get_current_user_id
+from app.services.auth_service import get_current_user
 from fastapi import APIRouter, Depends, HTTPException, status
 from schemas.user import UserCreate, UserSignIn
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.user import User
+
 from ..core.security import create_access_token
 from ..data.database import get_db
 
-router = APIRouter(tags=["User"])
+router = APIRouter(prefix="/user", tags=["User"])
 
 DB_DEPENDENCY = Depends(get_db)
 
@@ -71,6 +73,12 @@ async def sign_in(
         )
 
 
+USER_DEPENDENCY = Depends(get_current_user)
+
 @router.get("/me", status_code=status.HTTP_200_OK)
-async def get_me(user_id: UUID = Depends(get_current_user_id)):
-    return {"user_id": str(user_id)}
+async def get_me(user: User = USER_DEPENDENCY):
+    return {
+        "user_id": str(user.id),
+        "display_name": user.display_name,
+        "email": user.email,
+    }

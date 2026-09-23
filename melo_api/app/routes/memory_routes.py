@@ -18,7 +18,7 @@ from schemas.memory import (
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
-router = APIRouter(tags=["Memory"])
+router = APIRouter(prefix="/memory",tags=["Memory"])
 
 # Every memory request must include: Authorization: Bearer <raw JWT>
 # Do not wrap the JWT in quotes. Create-memory JSON body: {"content": "...", "memory_type": "general"}

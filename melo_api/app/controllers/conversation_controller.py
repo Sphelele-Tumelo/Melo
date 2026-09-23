@@ -7,7 +7,7 @@ from app.services.conversation_service import (
     get_conversations,
     update_conversation,
 )
-from schemas.conversation import ConversationCreate
+from schemas.conversation import ConversationCreate, ConversationUpdate
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -64,11 +64,13 @@ async def update_conversation_controller(
     db: AsyncSession,
     conversation_id: UUID,
     user_id: UUID,
+    update_data: ConversationUpdate | None = None,
 ):
 
     return await update_conversation(
         db=db,
         user_id=user_id,
-        conversation_id=conversation_id
+        conversation_id=conversation_id,
+        update_data=update_data,
     )
 

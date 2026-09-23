@@ -5,6 +5,7 @@ import { FcGoogle } from "react-icons/fc";
 import { FaMicrosoft } from "react-icons/fa";
 import MainLogoCard from "../assets/MainLogoCard.svg";
 import { useNavigate } from "react-router-dom";
+import { useAuthStore } from "../store/authStore";
 
 const legalSections = [
 	{
@@ -99,19 +100,74 @@ function AnimatedValues() {
 	);
 }
 
+
+function MobileAnimatedValues() {
+    const [step, setStep] = useState(0);
+
+    const words = [
+        { text: "Build.", color: "#25167D" },
+        { text: "Think.", color: "#FF6B4A" },
+        { text: "Live.", color: "#159A9C" },
+    ];
+
+    useEffect(() => {
+        const interval = window.setInterval(() => {
+            setStep((current) => (current + 1) % words.length);
+        }, 1550);
+
+        return () => window.clearInterval(interval);
+    }, );
+
+    return (
+        <section className="flex min-h-45 items-center justify-center overflow-hidden bg-[#FFF9F2] px-6 lg:hidden">
+            <div className="text-center">
+                <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#8E8898]">
+                    Intelligence that stays with you
+                </p>
+
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={words[step].text}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        transition={{ duration: 0.45 }}
+                        className="text-5xl font-semibold tracking-[-0.07em]"
+                        style={{ color: words[step].color }}
+                    >
+                        {words[step].text}
+                    </motion.div>
+                </AnimatePresence>
+            </div>
+        </section>
+    );
+}
+
 export default function SignIn() {
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [showPassword, setShowPassword] = useState(false);
 	const [showTermsModal, setShowTermsModal] = useState(false);
+
+	const { login, isLoading, error } = useAuthStore();
 	const navigate = useNavigate();
 
-	const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-		event.preventDefault();
-		if (email && password) {
-			navigate("/welcome");
-		}
-	};
+	const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!email || !password || isLoading) return;
+
+    try {
+        await login({
+            email,
+            password,
+        });
+
+        navigate("/welcome");
+    } catch {
+        // AuthStore already stores the error.
+    }
+};
 
 	return (
 		<main className="flex min-h-screen bg-white text-[#12111A]">
@@ -209,14 +265,29 @@ export default function SignIn() {
 								</button>
 							</span>
 						</label>
+						{error && (
+                            <p className="rounded-xl bg-red-50 px-4 py-3 text-[13px] text-red-600">
+                                {error}
+                            </p>
+                        )}
 
 						<button
-							type="submit"
-							className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#FF5722] px-4 py-3 text-[14px] font-medium text-white transition-transform hover:-translate-y-0.5 hover:bg-[#E94C1C]"
-						>
-							Sign in
-							<FiArrowRight />
-						</button>
+                        type="submit"
+                        disabled={isLoading}
+                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#FF5722] px-4 py-3 text-[14px] font-medium text-white transition-all hover:-translate-y-0.5 hover:bg-[#E94C1C] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        {isLoading ? (
+                            <>
+                                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                                Signing in...
+                            </>
+                        ) : (
+                            <>
+                                Sign in
+                                <FiArrowRight />
+                            </>
+                        )}
+                    </button>
 					</motion.form>
 
 					<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }}>
@@ -335,8 +406,42 @@ export default function SignIn() {
 					</div>
 				</div>
 			)}
+			<div className="flex min-h-45 items-center justify-center overflow-hidden bg-[#FFF9F2] px-6 lg:hidden">
+                 <motion.div
+                     initial={{ opacity: 0, y: 20 }}
+                     animate={{ opacity: 1, y: 0 }}
+                     transition={{ duration: 0.6 }}
+                     className="text-center"
+                 >
+                     <motion.p
+                         animate={{ opacity: [0.45, 1, 0.45] }}
+                         transition={{
+                             duration: 2.4,
+                             repeat: Infinity,
+                             ease: "easeInOut",
+                         }}
+                         className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-[#8E8898]"
+                     >
+                         Intelligence that stays with you
+                     </motion.p>
+             
+                     <motion.div
+                         key={new Date().getSeconds()}
+                         initial={{ opacity: 0, y: 12 }}
+                         animate={{ opacity: 1, y: 0 }}
+                         transition={{ duration: 0.5 }}
+                         className="text-4xl font-semibold tracking-[-0.06em]"
+                     >
+                         <span className="text-[#25167D]">Build.</span>{" "}
+                         <span className="text-[#FF6B4A]">Think.</span>{" "}
+                         <span className="text-[#159A9C]">Live.</span>
+                     </motion.div>
+                 </motion.div>
+             </div>
+             <MobileAnimatedValues />
+             <AnimatedValues />
 
-			<AnimatedValues />
+			
 		</main>
 	);
 }

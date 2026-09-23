@@ -2,7 +2,7 @@ import datetime
 from uuid import UUID
 
 from app.models.conversation import Conversation
-from schemas.conversation import ConversationCreate
+from schemas.conversation import ConversationCreate, ConversationUpdate
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -81,6 +81,7 @@ async def update_conversation(
     db: AsyncSession,
     conversation_id: UUID,
     user_id: UUID,
+    update_data: ConversationUpdate | None = None,
 ) -> Conversation | None:
 
     result = await db.execute(
@@ -96,8 +97,16 @@ async def update_conversation(
     if conversation is None:
         return None
 
+    if update_data is not None:
+        if update_data.is_pinned is not None:
+            conversation.is_pinned = update_data.is_pinned
+
+        if update_data.title is not None:
+            conversation.title = update_data.title
+
     # Update the conversation's updated_at timestamp
     conversation.updated_at = datetime.utcnow()
+
     await db.commit()
     await db.refresh(conversation)
     return conversation

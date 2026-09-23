@@ -15,7 +15,7 @@ from ..core.dependencies import get_current_user
 from ..data.database import get_db
 from ..models.user import User
 
-router = APIRouter(tags=["Conversation"])
+router = APIRouter(prefix="/conversation", tags=["Conversation"])
 
 DB_DEPENDENCY = Depends(get_db)
 CURRENT_USER = Depends(get_current_user)

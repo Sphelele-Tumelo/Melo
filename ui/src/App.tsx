@@ -1,52 +1,86 @@
-import { useState } from "react";
+import { useEffect } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { FiMenu } from "react-icons/fi";
 import Sidebar from "./components/Sidebar";
 import ChatBox from "./components/ChatBox";
-import Chats, { type Message } from "./components/Chats";
+import Chats from "./components/Chats";
 import Settings from "./components/Settings";
 import SignIn from "./components/Sign_In";
 import SignUp from "./components/Sign_Up";
 import LoadingPage from "./components/after_login/LoadingPage";
 import NewUserLoadingPage from "./components/after_login/NewUserLoadingPage";
+import { useChatStore } from "./store/chatStore";
+import { useState } from "react";
+import { useAuthStore } from "./store/authStore"; 
 import './index.css';
 
 
 function AppShell() {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [isThinking, setIsThinking] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { displayName, fetchCurrentUser } = useAuthStore();
 
-  function startChat(content: string) {
-    setMessages((current) => [
-      ...current,
-      { id: Date.now(), role: "user", content },
-    ]);
-    setIsThinking(true);
-    window.setTimeout(() => {
-      setMessages((current) => [
-        ...current,
-        { id: Date.now(), role: "assistant", content: "I’m here with you. Tell me a little more and we’ll work through it together." },
-      ]);
-      setIsThinking(false);
-    }, 2200);
+  const {
+    conversations,
+    messages,
+    activeConversationId,
+    isThinking,
+    createNewConversation,
+    loadConversations,
+    loadMessages,
+    sendMessage,
+    deleteConversation,
+    togglePin,
+    restartConversation,
+  } = useChatStore();
+
+  // Load the user's conversation list once, on app mount.
+  useEffect(() => {
+  loadConversations();
+  fetchCurrentUser();
+}, []);
+
+  async function handleStartChat(content: string) {
+    let conversationId = activeConversationId;
+
+    if (!conversationId) {
+        conversationId = await createNewConversation();
+    }
+
+    await sendMessage(content);
+}
+  async function handleNewChat() {
+    await createNewConversation();
+    setSidebarOpen(false);
   }
 
-  function restartChat() {
-    setMessages([]);
-    setIsThinking(false);
+  async function handleDeleteConversation(conversationId: string) {
+  await deleteConversation(conversationId);
+}
+
+  async function handleSelectConversation(conversationId: string) {
+    await loadMessages(conversationId);
+    setSidebarOpen(false);
   }
 
+  console.log("conversations:", conversations);
+  
   return (
     <div className="relative flex h-screen min-w-0 overflow-hidden bg-white dark:bg-gray-900">
       <Sidebar
         isOpen={sidebarOpen}
+        onDeleteConversation={handleDeleteConversation}
+        onPinConversation={togglePin}
         onClose={() => setSidebarOpen(false)}
         onOpenSettings={() => {
           setShowSettings(true);
           setSidebarOpen(false);
         }}
+        conversations={conversations}
+        displayName={displayName}
+        activeConversationId={activeConversationId}
+        onNewChat={handleNewChat}
+        onSelectConversation={handleSelectConversation}
       />
       {sidebarOpen && (
         <button
@@ -64,7 +98,18 @@ function AppShell() {
       >
         <FiMenu className="h-5 w-5" />
       </button>
-      {showSettings ? <Settings onBack={() => setShowSettings(false)} /> : messages.length === 0 ? <ChatBox onStartChat={startChat} /> : <Chats messages={messages} isThinking={isThinking} onSend={startChat} onRestart={restartChat} />}
+      {showSettings ? (
+        <Settings onBack={() => setShowSettings(false)} />
+      ) : messages.length === 0 ? (
+        <ChatBox onStartChat={handleStartChat} />
+      ) : (
+        <Chats
+          messages={messages}
+          isThinking={isThinking}
+          onSend={sendMessage}
+          onRestart={restartConversation}
+        />
+      )}
     </div>
   );
 }

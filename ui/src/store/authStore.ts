@@ -1,4 +1,6 @@
 import { create } from "zustand";
+import axios, { type AxiosError } from "axios";
+import apiClient from "../api/client";
 import {
   getStoredAuth,
   setStoredAuth,
@@ -7,9 +9,9 @@ import {
 import {
   signIn,
   signUp,
-  SignInRequest,
-  SignUpRequest,
-} from "../../api/auth"; // fixed path — adjust to match your real structure
+  type SignInRequest,
+  type SignUpRequest,
+} from "../api/auth";
 
 interface AuthState {
   accessToken: string | null;
@@ -17,6 +19,8 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  displayName: string | null;
+  fetchCurrentUser: () => Promise<void>;
 
   login: (data: SignInRequest) => Promise<void>;
   register: (data: SignUpRequest) => Promise<void>;
@@ -31,6 +35,16 @@ function decodeUserIdFromToken(token: string): string | null {
   } catch {
     return null;
   }
+}
+
+// Safely pulls a backend error message out of an unknown caught error,
+// falling back to a generic message if the shape doesn't match what we expect.
+function extractErrorMessage(err: unknown, fallback: string): string {
+  if (axios.isAxiosError(err)) {
+    const axiosErr = err as AxiosError<{ detail?: string }>;
+    return axiosErr.response?.data?.detail || fallback;
+  }
+  return fallback;
 }
 
 const storedAuth = getStoredAuth();
@@ -57,24 +71,33 @@ export const useAuthStore = create<AuthState>()((set) => ({
         isAuthenticated: true,
         isLoading: false,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       set({
         isLoading: false,
-        error: err.response?.data?.detail || "Failed to sign in.",
+        error: extractErrorMessage(err, "Failed to sign in."),
       });
       throw err;
     }
   },
+
+  fetchCurrentUser: async () => {
+  try {
+    const response = await apiClient.get("/user/me");
+    set({ displayName: response.data.display_name });
+  } catch {
+    // silent fail is fine here — worst case, UI shows the default fallback
+  }
+},
 
   register: async (data) => {
     set({ isLoading: true, error: null });
     try {
       await signUp(data);
       set({ isLoading: false });
-    } catch (err: any) {
+    } catch (err: unknown) {
       set({
         isLoading: false,
-        error: err.response?.data?.detail || "Failed to sign up.",
+        error: extractErrorMessage(err, "Failed to sign up."),
       });
       throw err;
     }

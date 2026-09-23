@@ -3,7 +3,6 @@
 from uuid import UUID
 
 import jwt
-from app.core.dependencies import get_current_user
 from app.core.security import decode_access_token
 from app.data.database import get_db
 from app.models import User
@@ -15,7 +14,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 bearer_scheme = HTTPBearer()
 
 DB_DEPENDENCY = Depends(get_db)
-USER_DEPENDENCY = Depends(get_current_user)
 SCHEME_DEPENDENCY = Depends(bearer_scheme)
 
 
@@ -51,15 +49,17 @@ async def get_current_user_id(
             detail="Invalid authentication token.",
         )
     except (ValueError, TypeError):
-        # UUID(...) raises ValueError if the 'sub' claim isn't a valid UUID string
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication token.",
         )
 
 
+USER_ID_DEPENDENCY = Depends(get_current_user_id)
+
+
 async def get_current_user(
-    user_id: UUID = USER_DEPENDENCY,
+    user_id: UUID = USER_ID_DEPENDENCY,
     db: AsyncSession = DB_DEPENDENCY,
 ) -> User:
     """

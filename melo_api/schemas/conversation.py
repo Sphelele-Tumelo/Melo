@@ -8,6 +8,11 @@ class ConversationCreate(BaseModel):
     title: str = "New chat"
 
 
+class ConversationUpdate(BaseModel):
+    is_pinned: bool | None = None
+    title: str | None = None
+
+
 class ConversationResponse(BaseModel):
     id: UUID
     user_id: UUID

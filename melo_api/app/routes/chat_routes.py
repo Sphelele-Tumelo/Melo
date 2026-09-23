@@ -9,14 +9,39 @@ from app.controllers.chat_controller import (
 from app.core.dependencies import get_current_user
 from app.data.database import get_db
 from app.models.user import User
+from app.services.chatservice import create_message_stream
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 from schemas.chat import ChatResponse, MessageCreate, MessageResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-router = APIRouter(tags=["Chat"])
+router = APIRouter(prefix="/chat", tags=["Chat"])
 
 DB_DEPENDENCY = Depends(get_db)
 CURRENT_USER = Depends(get_current_user)
+
+
+@router.post("/{conversation_id}/stream")
+async def stream_chat_endpoint(
+    conversation_id: UUID,
+    message_data: MessageCreate,
+    db: AsyncSession = DB_DEPENDENCY,
+    current_user: User = CURRENT_USER,
+):
+    return StreamingResponse(
+        create_message_stream(
+            db=db,
+            conversation_id=conversation_id,
+            user_id=current_user.id,
+            message_data=message_data,
+        ),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.post(
@@ -47,7 +72,11 @@ async def create_message(
         )
 
 
-@router.get("/get_messages", status_code=status.HTTP_200_OK, response_model=list[MessageResponse])
+@router.get(
+    "/{conversation_id}",
+    status_code=status.HTTP_200_OK,
+    response_model=list[MessageResponse]
+)
 async def get_messages(
     conversation_id: UUID,
     db: AsyncSession = DB_DEPENDENCY,
@@ -65,6 +94,7 @@ async def get_messages(
             detail=str(e),
         )
 
+
 @router.put("/update_message", status_code=status.HTTP_200_OK, response_model=ChatResponse)
 async def update_message(
     conversation_id: UUID,
@@ -80,6 +110,7 @@ async def update_message(
         user_id=current_user.id,
         message_data=message_data,
     )
+
 
 @router.delete("/delete_message", status_code=status.HTTP_200_OK)
 async def delete_message(

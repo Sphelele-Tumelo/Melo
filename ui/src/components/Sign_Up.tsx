@@ -5,6 +5,7 @@ import { FaMicrosoft } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import { useTypewriter } from "../utils/useTypewriter";
 import MainLogoCard from "../assets/MainLogoCard.svg";
+import { useAuthStore } from "../store/authStore";
 
 const termsSections = [
 	{
@@ -75,29 +76,54 @@ export default function SignUp() {
 	const [showPassword, setShowPassword] = useState(false);
 	const [showTermsModal, setShowTermsModal] = useState(false);
 	const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
+	const { register, isLoading, error } = useAuthStore();
 	const navigate = useNavigate();
 	const typedMessage = useTypewriter("Your mind deserves company.");
 	const words = typedMessage.split(" ");
 
-	const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-		event.preventDefault();
-		if (!email || !password) {
-			return;
-		}
+	const handleSubmit = async (
+        event: React.FormEvent<HTMLFormElement>
+    ) => {
+        event.preventDefault();
+    
+        if (!email || !password || isLoading) {
+            return;
+        }
+    
+        if (!hasAcceptedTerms) {
+            setShowTermsModal(true);
+            return;
+        }
+    
+        try {
+            await register({
+                email,
+                password,
+                display_name: email.split("@")[0],
+            });
+    
+            navigate("/signin");
+        } catch {
+            // AuthStore already stores the error.
+        }
+    };
 
-		if (!hasAcceptedTerms) {
-			setShowTermsModal(true);
-			return;
-		}
-
-		navigate("/app");
-	};
-
-	const acceptTermsAndContinue = () => {
-		setHasAcceptedTerms(true);
-		setShowTermsModal(false);
-		navigate("/new-user-welcome");
-	};
+    	const acceptTermsAndContinue = async () => {
+        setHasAcceptedTerms(true);
+        setShowTermsModal(false);
+    
+        try {
+            await register({
+                email,
+                password,
+                display_name: email.split("@")[0],
+            });
+    
+            navigate("/signin");
+        } catch {
+            // AuthStore already stores the error.
+        }
+    };
 
 	return (
 		<main className="flex min-h-screen bg-white text-[#12111A]">
@@ -165,13 +191,29 @@ export default function SignUp() {
 							</span>
 						</label>
 
+						{error && (
+                            <p className="rounded-xl bg-red-50 px-4 py-3 text-[13px] text-red-600">
+                                {error}
+                            </p>
+                        )}
+
 						<button
-							type="submit"
-							className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#159A9C] px-4 py-3 text-[14px] font-medium text-white transition-transform hover:-translate-y-0.5 hover:bg-[#117C7E]"
-						>
-							Create account
-							<FiArrowRight />
-						</button>
+                            type="submit"
+                            disabled={isLoading}
+                            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#159A9C] px-4 py-3 text-[14px] font-medium text-white transition-all hover:-translate-y-0.5 hover:bg-[#117C7E] disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            {isLoading ? (
+                                <>
+                                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                                    Creating account...
+                                </>
+                            ) : (
+                                <>
+                                    Create account
+                                    <FiArrowRight />
+                                </>
+                            )}
+                        </button>
 					</form>
 
 					<div className="mt-6">
