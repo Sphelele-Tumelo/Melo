@@ -118,7 +118,7 @@ export default function Sidebar({
           </p>
         ) : (
           sortedConversations.map((conversation) => {
-            const isPinned = onPinConversation.includes(conversation.id);
+            const isPinned = conversation.is_pinned;
             const isMenuOpen = openMenuId === conversation.id;
 
             return (

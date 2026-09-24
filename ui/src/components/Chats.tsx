@@ -183,7 +183,7 @@ function handleScroll() {
   return (
     <main className="flex min-w-0 flex-1 flex-col bg-white">
       <header className="flex h-16 shrink-0 items-center justify-between border-b border-[#F0F0F0] px-4 pl-16 sm:px-7 sm:pl-7">
-        <span className="text-[14px] font-medium text-[#6F6F6F]">{conversationTitle || "Melo"}</span>
+        <span className="text-[14px] font-medium text-[#6F6F6F]">{conversationTitle || ""}</span>
         <div className="flex items-center gap-1">
           <IconButton label="Share conversation" onClick={shareChat}>
             <FiShare2 className="h-4 w-4" />

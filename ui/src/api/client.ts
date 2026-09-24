@@ -2,7 +2,7 @@ import axios from "axios";
 import { getAccessToken, clearStoredAuth } from "../utils/authStorage";
 
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: import.meta.env.VITE_API_URL || "https://t4ncg5kw-8000.inc1.devtunnels.ms",
   headers: {
     "Content-Type": "application/json",
   },

@@ -170,7 +170,7 @@ export default function SignIn() {
 };
 
 	return (
-		<main className="flex min-h-screen bg-white text-[#12111A]">
+		<main className="flex min-h-screen flex-col bg-white text-[#12111A] lg:flex-row">
 			<section className="flex w-full flex-col px-6 py-8 sm:px-12 lg:w-[46%] lg:max-w-155 lg:px-20">
 				<div className="flex items-center gap-3">
 					<div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#FFF0E9] text-sm font-semibold text-[#FF5722]">

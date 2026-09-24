@@ -15,7 +15,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
-        "http://127.0.0.1:5173",  # add this too, in case Vite ever serves on 127.0.0.1 instead of localhost
+        "http://127.0.0.1:5173",
+        "https://t4ncg5kw-5173.inc1.devtunnels.ms"  # add this too, in case Vite ever serves on 127.0.0.1 instead of localhost
     ],
     allow_credentials=True,
     allow_methods=["*"],
