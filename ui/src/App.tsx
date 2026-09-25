@@ -63,6 +63,8 @@ function AppShell() {
     setSidebarOpen(false);
   }
 
+  const activeConversation = conversations.find(c => c.id === activeConversationId);
+
   console.log("conversations:", conversations);
   
   return (
@@ -106,6 +108,7 @@ function AppShell() {
         <Chats
           messages={messages}
           isThinking={isThinking}
+          conversationTitle={activeConversation?.title || "Melo"}
           onSend={sendMessage}
           onRestart={restartConversation}
         />
