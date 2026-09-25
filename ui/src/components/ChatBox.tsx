@@ -41,7 +41,7 @@ export default function ChatBox({ onStartChat }: ChatBoxProps) {
                         <h1 className="text-center text-[clamp(24px,7vw,30px)] font-medium tracking-[-0.03em] text-[#12111A]">
                             What can I help you with?
                         </h1>
-                        <p className="mt-2 text-[15px] text-[#8A8F98]">
+                        <p className="mt-2 text-[16px] text-[#8A8F98]">
                             I&apos;m here whenever you need me.
                         </p>
                     </div>
@@ -79,7 +79,7 @@ export default function ChatBox({ onStartChat }: ChatBoxProps) {
                             rows={2}
                             placeholder="Message Melo..."
                             aria-label="Message Melo"
-                            className="block w-full resize-none bg-transparent px-3 py-2 text-[15px] font-medium text-[#12111A] outline-none placeholder:text-[#A0A0A0]"
+                            className="block w-full resize-none bg-transparent px-3 py-2 text-[16px] font-medium text-[#12111A] outline-none placeholder:text-[#A0A0A0]"
                         />
                         <div className="flex items-center justify-between px-1">
                             <span />

@@ -233,7 +233,7 @@ function handleScroll() {
                     message.role === "user" ? "max-w-[78%]" : "max-w-[88%]"
                   }
                 >
-                  <div className={message.role === "user" ? "..." : "pt-1 text-[15px] leading-7 text-[#303030]"}>
+                  <div className={message.role === "user" ? "..." : "pt-1 text-[16px] leading-7 text-[#303030]"}>
                     {message.role === "assistant" ? (
                       isThinking && message === [...messages].reverse().find(
                         (item) => item.role === "assistant"
@@ -402,7 +402,7 @@ function handleScroll() {
               voiceMode ? "Voice mode is ready..." : "Message Melo..."
             }
             aria-label="Message Melo"
-            className="block w-full resize-none bg-transparent px-3 py-2 text-[15px] font-medium text-[#12111A] outline-none placeholder:text-[#A0A0A0]"
+            className="block w-full resize-none bg-transparent px-3 py-2 text-[16px] font-medium text-[#12111A] outline-none placeholder:text-[#A0A0A0]"
           />
           <div className="flex items-center justify-between px-1">
             <IconButton label="Attach a file">

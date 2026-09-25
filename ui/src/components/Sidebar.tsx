@@ -22,7 +22,6 @@ type SidebarProps = {
   onSelectConversation: (conversationId: string) => void;
   onDeleteConversation: (conversationId: string) => void;
   onPinConversation?: (conversationId: string) => void;
-  
 };
 
 export default function Sidebar({
@@ -36,12 +35,20 @@ export default function Sidebar({
   onSelectConversation,
   onDeleteConversation,
   onPinConversation,
- 
 }: SidebarProps) {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Close the open menu on any outside click
+  // Desktop-only collapse state, persisted across reloads
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("melo-sidebar-collapsed") === "true";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("melo-sidebar-collapsed", String(collapsed));
+  }, [collapsed]);
+
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -53,38 +60,51 @@ export default function Sidebar({
   }, []);
 
   const sortedConversations = [...conversations].sort((a, b) => {
-  if (a.is_pinned && !b.is_pinned) return -1;
-  if (!a.is_pinned && b.is_pinned) return 1;
-  return 0;
+    if (a.is_pinned && !b.is_pinned) return -1;
+    if (!a.is_pinned && b.is_pinned) return 1;
+    return 0;
   });
 
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-50 flex w-[min(280px,85vw)] flex-col border-r border-[#E9E9E9] bg-white px-3 py-4 text-[#12111A] shadow-[8px_0_28px_rgba(18,17,26,0.08)] transition-transform duration-300 ease-out md:relative md:z-auto md:w-65 md:shrink-0 md:shadow-none ${
-        isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
-      }`}
+      className={`fixed inset-y-0 left-0 z-50 flex w-[min(280px,85vw)] flex-col border-r border-[#E9E9E9] bg-white px-3 py-4 text-[#12111A] shadow-[8px_0_28px_rgba(18,17,26,0.08)] transition-[transform,width] duration-300 ease-out md:relative md:z-auto md:shrink-0 md:shadow-none ${
+        collapsed ? "md:w-16" : "md:w-65"
+      } ${isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
     >
       {/* Header */}
-      <div className="flex items-center gap-2 px-2 py-1">
+      <div className={`flex items-center gap-2 px-2 py-1 ${collapsed ? "md:justify-center md:px-0" : ""}`}>
         <a href="/" aria-label="Melo home" className="flex items-center gap-2">
-          <img src={melo} alt="Melo logo" className="h-5 w-5" />
-          <h2 className="text-[16px] font-semibold tracking-tight text-[#FF5722]">
+          <img src={melo} alt="Melo logo" className="h-5 w-5 shrink-0" />
+          <h2 className={`text-[16px] font-semibold tracking-tight text-[#FF5722] ${collapsed ? "md:hidden" : ""}`}>
             Melo
           </h2>
         </a>
 
+        {/* Mobile-only close button */}
         <button
           type="button"
-          aria-label="Collapse sidebar"
+          aria-label="Close sidebar"
           onClick={onClose}
-          className="ml-auto rounded-md p-1.5 text-[#5F6368] transition-colors hover:bg-[#F5F5F5] hover:text-[#202124]"
+          className="ml-auto rounded-md p-1.5 text-[#5F6368] transition-colors hover:bg-[#F5F5F5] hover:text-[#202124] md:hidden"
+        >
+          <FiSidebar className="h-4 w-4" />
+        </button>
+
+        {/* Desktop-only collapse toggle */}
+        <button
+          type="button"
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          onClick={() => setCollapsed((prev) => !prev)}
+          className={`hidden rounded-md p-1.5 text-[#5F6368] transition-colors hover:bg-[#F5F5F5] hover:text-[#202124] md:inline-flex ${
+            collapsed ? "" : "ml-auto"
+          }`}
         >
           <FiSidebar className="h-4 w-4" />
         </button>
       </div>
 
-      {/* Main Navigation */}
-      <nav className="mt-5 space-y-0.5" aria-label="Main navigation">
+      {/* Main Navigation — full version, hidden on desktop when collapsed */}
+      <nav className={`mt-5 space-y-0.5 ${collapsed ? "md:hidden" : ""}`} aria-label="Main navigation">
         <button
           type="button"
           onClick={onNewChat}
@@ -103,15 +123,38 @@ export default function Sidebar({
         </button>
       </nav>
 
+      {/* Icon-only nav — only visible on desktop when collapsed */}
+      <nav
+        className={`mt-5 hidden flex-col items-center gap-2 ${collapsed ? "md:flex" : ""}`}
+        aria-label="Main navigation (collapsed)"
+      >
+        <button
+          type="button"
+          aria-label="New chat"
+          onClick={onNewChat}
+          className="flex h-9 w-9 items-center justify-center rounded-md text-[#5F6368] transition-colors hover:bg-[#F5F5F5] hover:text-[#202124]"
+        >
+          <FiEdit3 className="h-4.5 w-4.5" />
+        </button>
+
+        <button
+          type="button"
+          aria-label="Search"
+          className="flex h-9 w-9 items-center justify-center rounded-md text-[#5F6368] transition-colors hover:bg-[#F5F5F5] hover:text-[#202124]"
+        >
+          <FiSearch className="h-4.5 w-4.5" />
+        </button>
+      </nav>
+
       {/* History Label */}
-      <div className="mt-6 px-2.5 py-1">
+      <div className={`mt-6 px-2.5 py-1 ${collapsed ? "md:hidden" : ""}`}>
         <span className="text-[11px] font-semibold uppercase tracking-wider text-[#8A8F98]">
           History
         </span>
       </div>
 
       {/* Conversation History */}
-      <div className="mt-1 flex-1 space-y-0.5 overflow-y-auto">
+      <div className={`mt-1 flex-1 space-y-0.5 overflow-y-auto ${collapsed ? "md:hidden" : ""}`}>
         {sortedConversations.length === 0 ? (
           <p className="px-2.5 py-2 text-[12px] text-[#A0A0A0]">
             No conversations yet
@@ -140,7 +183,6 @@ export default function Sidebar({
                   </span>
                 </button>
 
-                {/* Three-dot menu trigger — visible on hover, or always if its menu is open */}
                 <button
                   type="button"
                   aria-label="Conversation options"
@@ -155,7 +197,6 @@ export default function Sidebar({
                   <FiMoreHorizontal className="h-3.5 w-3.5" />
                 </button>
 
-                {/* Dropdown: Pin / Delete */}
                 {isMenuOpen && (
                   <div
                     ref={menuRef}
@@ -193,8 +234,8 @@ export default function Sidebar({
         )}
       </div>
 
-      {/* Bottom Section */}
-      <div className="mt-auto flex items-center justify-between border-t border-[#F0F0F0] pt-3 px-1">
+      {/* Bottom Section — hidden on desktop when collapsed */}
+      <div className={`mt-auto flex items-center justify-between border-t border-[#F0F0F0] pt-3 px-1 ${collapsed ? "md:hidden" : ""}`}>
         <button
           type="button"
           className="flex items-center gap-2.5 rounded-md px-1.5 py-1 transition-colors hover:bg-[#F5F5F5]"

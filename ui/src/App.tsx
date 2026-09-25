@@ -69,7 +69,7 @@ function AppShell() {
   console.log("conversations:", conversations);
   
   return (
-    <div className="relative flex h-screen min-w-0 overflow-hidden bg-white dark:bg-gray-900">
+    <div className="relative flex h-dvh min-w-0 overflow-hidden bg-white dark:bg-gray-900">
       <Sidebar
         isOpen={sidebarOpen}
         onDeleteConversation={handleDeleteConversation}
