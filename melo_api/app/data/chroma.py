@@ -1,9 +1,16 @@
+import os
+
 import chromadb
 
 
 class ChromaDatabase:
     def __init__(self):
-        self.client = chromadb.PersistentClient(path="./chroma_data")
+        # Uses Railway's mounted volume path in production;
+        # falls back to a local folder when running locally
+        # (RAILWAY_VOLUME_MOUNT_PATH won't exist outside Railway).
+        chroma_path = os.getenv("RAILWAY_VOLUME_MOUNT_PATH", "./chroma_data")
+
+        self.client = chromadb.PersistentClient(path=chroma_path)
 
         self.memory_collection = self.client.get_or_create_collection(
             name="memories"
@@ -37,9 +44,6 @@ class ChromaDatabase:
         embedding: list[float],
         memory_type: str,
     ):
-        # Chroma's .update() replaces the record in place for a given id —
-        # no need to delete first. If the id doesn't exist yet, this is a no-op,
-        # so create_memory must always run before update_memory for a given id.
         self.memory_collection.update(
             ids=[memory_id],
             embeddings=[embedding],
