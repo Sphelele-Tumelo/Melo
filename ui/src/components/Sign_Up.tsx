@@ -1,438 +1,614 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { FiArrowLeft, FiArrowRight, FiEye, FiEyeOff, FiShield, FiX } from "react-icons/fi";
+import {
+  FiArrowLeft,
+  FiArrowRight,
+  FiCheck,
+  FiEye,
+  FiEyeOff,
+  FiShield,
+  FiX,
+} from "react-icons/fi";
 import { FcGoogle } from "react-icons/fc";
 import { FaMicrosoft } from "react-icons/fa";
-import { useNavigate } from "react-router-dom";
-import { useTypewriter } from "../utils/useTypewriter";
 import MainLogoCard from "../assets/MainLogoCard.svg";
+import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 
-const termsSections = [
-	{
-		title: "1. Acceptance of Terms",
-		body:
-			"By creating an account with Melo, you agree to these Terms and Conditions and the Melo Privacy Policy. These terms govern your access to and use of our AI chat services, mobile and web experiences, account features, and all related software and content provided by Melo.",
-	},
-	{
-		title: "2. Your Account and Eligibility",
-		body:
-			"You must be at least 18 years old or have parental or guardian consent to use the Service. You are responsible for the accuracy of your account information and for keeping your login credentials secure. You may not share your account with others or use the Service for unlawful, fraudulent, abusive, or harmful purposes.",
-	},
-	{
-		title: "3. AI Services and Output",
-		body:
-			"Melo provides AI-generated assistance, summaries, recommendations, and conversational responses. While we aim to be helpful and accurate, AI-generated content may be incomplete, outdated, or incorrect. You are responsible for reviewing any output before relying on it for medical, legal, financial, safety-critical, or other consequential decisions.",
-	},
-	{
-		title: "4. User Content and Data",
-		body:
-			"You retain ownership of the content you submit to Melo, but you grant Melo a limited license to process, store, analyze, and improve the Service in order to operate, secure, and improve the model experience. This includes using aggregated, de-identified data to improve reliability, safety, and product quality, subject to our Privacy Policy.",
-	},
-	{
-		title: "5. Prohibited Use",
-		body:
-			"You may not use Melo to generate or distribute harmful content, spam, fraud, illegal material, personal data misuse, harassment, or activity that interferes with the stability, security, or integrity of the Service. We may suspend or terminate accounts that violate these rules.",
-	},
-	{
-		title: "6. Privacy and Data Protection",
-		body:
-			"Melo processes your personal information to create and secure your account, provide the Service, prevent abuse, and improve product performance. We collect the data necessary for authentication, account support, usage analytics, and model operation. We do not sell personal data. We may share information with service providers that help us operate the platform under strict confidentiality obligations.",
-	},
-	{
-		title: "7. Data Retention and Security",
-		body:
-			"We retain account and conversation data for as long as necessary to provide the Service, comply with legal obligations, resolve disputes, and enforce our policies. We use reasonable administrative, technical, and organizational safeguards, but no system can guarantee absolute security. You should not submit highly sensitive personal, financial, or confidential information unless you are comfortable with the inherent risks of digital processing.",
-	},
-	{
-		title: "8. Intellectual Property",
-		body:
-			"The Melo platform, design, branding, software, prompts, templates, and proprietary content are owned by Melo or its licensors. You may not copy, reverse engineer, resell, or exploit the Service beyond the rights granted in these Terms.",
-	},
-	{
-		title: "9. Service Availability and Changes",
-		body:
-			"We may update, maintain, or discontinue aspects of the Service at any time. We may also change these Terms and the Privacy Policy to reflect product improvements, new features, or legal requirements. Continued use after notice constitutes your acceptance of the updated terms.",
-	},
-	{
-		title: "10. Limitation of Liability",
-		body:
-			"To the maximum extent permitted by law, Melo is not liable for indirect, incidental, consequential, or punitive damages, including loss of business, data, or goodwill, arising from the use of the Service. Melo's total liability for any claim shall not exceed the fees paid for the Service, if applicable, or the amount reasonably attributable to the relevant claim.",
-	},
-	{
-		title: "11. Termination",
-		body:
-			"Melo may suspend or terminate your access if you violate these Terms or if the Service is no longer commercially viable. Upon termination, your right to use the Service ends, but certain provisions relating to liability, dispute resolution, and data retention may survive.",
-	},
-	{
-		title: "12. Governing Law and Disputes",
-		body:
-			"These Terms are governed by the laws of the jurisdiction where Melo is established, without regard to conflict of law principles. Any dispute arising from these Terms will be resolved through good-faith negotiation and, if necessary, through the competent courts of that jurisdiction.",
-	},
+const legalSections = [
+  {
+    title: "1. Acceptance of Terms",
+    body: "By using Melo, you agree to these Terms and the Melo Privacy Policy. These terms govern access to the AI assistant, account creation, content processing, and support services.",
+  },
+  {
+    title: "2. AI Service Use",
+    body: "Melo provides AI-generated recommendations, conversation support, and productivity assistance. Outputs may be incomplete or incorrect. You are responsible for reviewing any content before relying on it for important decisions.",
+  },
+  {
+    title: "3. User Data and Privacy",
+    body: "We collect and process account information, chat activity, and usage data to secure the platform and improve the service. We do not sell personal data and we use third-party processors only under strict confidentiality obligations.",
+  },
+  {
+    title: "4. Prohibited Activity",
+    body: "You may not use Melo for unlawful, abusive, harmful, deceptive, or spam-related activity. We may suspend or remove access when misuse is detected.",
+  },
+  {
+    title: "5. Content Ownership",
+    body: "You keep ownership of your input content, but you grant Melo a limited license to process, store, and improve the service in accordance with the Privacy Policy and these Terms.",
+  },
+  {
+    title: "6. Liability and Safety",
+    body: "Melo is provided as-is and is not liable for indirect, incidental, or consequential losses arising from use of the platform. Use good judgment and do not rely on AI output for medical, legal, or safety-critical decisions without review.",
+  },
 ];
 
-const fieldVariants = {
-	hidden: { opacity: 0, y: 12 },
-	visible: (i: number) => ({
-		opacity: 1,
-		y: 0,
-		transition: { delay: 0.08 * i, duration: 0.4, ease: "easeOut" as const },
-	}),
-};
+function Brand() {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-[10px] border border-black/[0.06] bg-[#F7F6F3]">
+        <img
+          src={MainLogoCard}
+          alt="Melo"
+          className="h-full w-full object-contain"
+        />
+      </div>
 
+      <span className="text-[17px] font-semibold tracking-[-0.04em] text-[#181716]">
+        Melo
+      </span>
+    </div>
+  );
+}
+
+function FieldLabel({
+  children,
+  htmlFor,
+}: {
+  children: React.ReactNode;
+  htmlFor: string;
+}) {
+  return (
+    <label
+      htmlFor={htmlFor}
+      className="mb-2 block text-[12px] font-medium tracking-[-0.01em] text-[#66625D]"
+    >
+      {children}
+    </label>
+  );
+}
+
+function LegalModal({
+  onClose,
+}: {
+  onClose: () => void;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#171615]/35 p-4 backdrop-blur-[3px]"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 18, scale: 0.985 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 12, scale: 0.985 }}
+        transition={{ duration: 0.28 }}
+        className="flex h-[82vh] w-full max-w-2xl flex-col overflow-hidden border border-black/[0.08] bg-[#FCFBF8] shadow-[0_30px_100px_rgba(0,0,0,0.18)]"
+      >
+        <div className="flex items-center justify-between border-b border-black/[0.07] px-6 py-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center border border-black/[0.07] bg-white">
+              <FiShield className="h-4 w-4 text-[#F15A24]" />
+            </div>
+
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#99948D]">
+                Legal
+              </p>
+
+              <h2 className="mt-0.5 text-[17px] font-semibold tracking-[-0.03em] text-[#1B1917]">
+                Terms & Privacy
+              </h2>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close terms"
+            className="flex h-8 w-8 items-center justify-center text-[#817C75] hover:bg-black/[0.04]"
+          >
+            <FiX />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-6 py-7">
+          <div className="space-y-7 text-[13px] leading-7 text-[#625E58]">
+            <p>
+              Melo is an AI companion designed to help you think, organize,
+              and create. By using our product, you agree to comply with these
+              terms and our privacy policy, which explains how we process your
+              account details, conversation data, and platform usage.
+            </p>
+
+            {legalSections.map((section) => (
+              <section key={section.title}>
+                <h3 className="mb-1.5 text-[13px] font-semibold text-[#24211F]">
+                  {section.title}
+                </h3>
+
+                <p>{section.body}</p>
+              </section>
+            ))}
+
+            <section>
+              <h3 className="mb-1.5 text-[13px] font-semibold text-[#24211F]">
+                7. Acceptance
+              </h3>
+
+              <p>
+                By continuing to use Melo, you confirm that you have read,
+                understood, and accepted these Terms and our Privacy Policy. If
+                you do not agree, do not use the service.
+              </p>
+            </section>
+          </div>
+        </div>
+
+        <div className="border-t border-black/[0.07] px-6 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="ml-auto block bg-[#181716] px-5 py-2.5 text-[12px] font-medium text-white hover:bg-[#292725]"
+          >
+            Close
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function DesktopAside() {
+  return (
+    <aside className="relative hidden min-h-screen flex-1 overflow-hidden bg-[#171615] lg:flex">
+      <div className="absolute inset-0">
+        <div className="absolute left-1/4 top-1/4 h-96 w-96 rounded-full bg-[#F15A24]/[0.06] blur-[120px]" />
+
+        <div className="absolute bottom-0 right-0 h-96 w-96 rounded-full bg-white/[0.025] blur-[120px]" />
+      </div>
+
+      <div className="relative z-10 flex w-full flex-col justify-between p-10 xl:p-14">
+        <div className="flex items-center justify-between">
+          <div className="text-[12px] font-medium uppercase tracking-[0.16em] text-white/40">
+            NeoMind Intelligence
+          </div>
+
+          <div className="h-px w-20 bg-white/10" />
+        </div>
+
+        <div className="max-w-xl">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: 56 }}
+            transition={{ duration: 0.7 }}
+            className="mb-8 h-px bg-[#F15A24]"
+          />
+
+          <motion.p
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55 }}
+            className="mb-5 text-[11px] font-medium uppercase tracking-[0.22em] text-white/35"
+          >
+            Start somewhere
+          </motion.p>
+
+          <motion.h2
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.08 }}
+            className="text-[clamp(3.5rem,6vw,6.8rem)] font-medium leading-[0.9] tracking-[-0.075em] text-[#F4F1EA]"
+          >
+            Give your
+            <br />
+            thoughts
+            <br />
+            a place.
+          </motion.h2>
+
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.65, delay: 0.4 }}
+            className="mt-8 max-w-md text-[14px] leading-7 text-white/45"
+          >
+            Create your Melo space and keep the things worth thinking about
+            close.
+          </motion.p>
+        </div>
+
+        <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.16em] text-white/25">
+          <span>02 / 02</span>
+          <span>melo</span>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+function MobileIntro({
+  onOpen,
+}: {
+  onOpen: () => void;
+}) {
+  return (
+    <motion.section
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="relative flex min-h-screen flex-col bg-[#171615] px-6 py-7 lg:hidden"
+    >
+      <div className="flex items-center justify-between">
+        <Brand />
+
+        <span className="text-[10px] uppercase tracking-[0.16em] text-white/35">
+          02 / 02
+        </span>
+      </div>
+
+      <div className="flex flex-1 flex-col justify-center">
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: 44 }}
+          transition={{ duration: 0.7 }}
+          className="mb-7 h-px bg-[#F15A24]"
+        />
+
+        <motion.p
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.55 }}
+          className="mb-5 text-[10px] font-medium uppercase tracking-[0.2em] text-white/35"
+        >
+          Start somewhere
+        </motion.p>
+
+        <motion.h1
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.08 }}
+          className="text-[clamp(3.8rem,18vw,6rem)] font-medium leading-[0.88] tracking-[-0.075em] text-[#F4F1EA]"
+        >
+          Give
+          <br />
+          your
+          <br />
+          thoughts
+          <br />
+          a place.
+        </motion.h1>
+
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.65, delay: 0.4 }}
+          className="mt-7 max-w-xs text-[13px] leading-6 text-white/40"
+        >
+          Create your space for conversations, ideas and everything in between.
+        </motion.p>
+      </div>
+
+      <button
+        type="button"
+        onClick={onOpen}
+        className="group flex w-full items-center justify-between border-t border-white/10 py-5 text-left"
+      >
+        <span className="text-[12px] font-medium text-white/65">
+          Create your space
+        </span>
+
+        <span className="flex h-9 w-9 items-center justify-center border border-white/10 text-white transition-all group-hover:border-[#F15A24] group-hover:bg-[#F15A24]">
+          <FiArrowRight className="transition-transform group-hover:translate-x-1" />
+        </span>
+      </button>
+    </motion.section>
+  );
+}
+
+function SignupForm({
+  onBack,
+  onOpenTerms,
+}: {
+  onBack?: () => void;
+  onOpenTerms: () => void;
+}) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+
+  const { register, isLoading, error } = useAuthStore();
+  const navigate = useNavigate();
+
+  const handleSubmit = async (
+    event: React.FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault();
+
+    if (!email || !password || !acceptedTerms || isLoading) {
+      return;
+    }
+
+    try {
+      await register({
+        email,
+        password,
+        display_name: email.split("@")[0],
+      });
+
+      navigate("/signin");
+    } catch {
+      // AuthStore already stores the error.
+    }
+  };
+
+  return (
+    <div className="relative flex min-h-screen w-full flex-col bg-[#FCFBF8] px-6 py-7 sm:px-12 lg:min-h-0 lg:px-16 xl:px-20">
+      {onBack && (
+        <button
+          type="button"
+          onClick={onBack}
+          className="absolute right-6 top-7 flex items-center gap-2 text-[11px] font-medium text-[#8B867E] transition-colors hover:text-[#181716] sm:right-12 lg:hidden"
+        >
+          <FiArrowLeft />
+          Back
+        </button>
+      )}
+
+      <div className="hidden lg:block">
+        <Brand />
+      </div>
+
+      <div className="mx-auto flex w-full max-w-[390px] flex-1 flex-col justify-center py-12">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.55 }}
+        >
+          <p className="mb-5 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#AAA49C]">
+            New here
+          </p>
+
+          <h1 className="text-[42px] font-medium leading-none tracking-[-0.065em] text-[#191817]">
+            Make some
+            <br />
+            room<span className="text-[#F15A24]">.</span>
+          </h1>
+
+          <p className="mt-5 max-w-sm text-[13px] leading-6 text-[#88837B]">
+            Create your Melo space and start thinking with company.
+          </p>
+        </motion.div>
+
+        <motion.form
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.55, delay: 0.12 }}
+          onSubmit={handleSubmit}
+          className="mt-10"
+        >
+          <div className="space-y-6">
+            <div>
+              <FieldLabel htmlFor="signup-email">
+                Email
+              </FieldLabel>
+
+              <input
+                id="signup-email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                type="email"
+                autoComplete="email"
+                placeholder="you@example.com"
+                required
+                className="w-full border-b border-[#D9D5CF] bg-transparent px-0 py-3 text-[14px] text-[#1C1A18] outline-none transition-colors placeholder:text-[#B7B2AA] focus:border-[#F15A24] rounded"
+              />
+            </div>
+
+            <div>
+              <FieldLabel htmlFor="signup-password">
+                Password
+              </FieldLabel>
+
+              <div className="relative">
+                <input
+                  id="signup-password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
+                  placeholder="Create a password"
+                  required
+                  className="w-full border-b rounded text-start border-[#D9D5CF] bg-transparent px-0 py-3 pr-9 text-[14px] text-[#1C1A18] outline-none transition-colors placeholder:text-[#B7B2AA] focus:border-[#F15A24]"
+                />
+
+                <button
+                  type="button"
+                  aria-label={
+                    showPassword ? "Hide password" : "Show password"
+                  }
+                  onClick={() => setShowPassword((visible) => !visible)}
+                  className="absolute right-0 top-1/2 -translate-y-1/2 text-[#99938B] hover:text-[#181716]"
+                >
+                  {showPassword ? <FiEyeOff /> : <FiEye />}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setAcceptedTerms((accepted) => !accepted)}
+            className="mt-6 flex w-full items-start gap-3 text-left"
+          >
+            <span
+              className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center border transition-colors ${
+                acceptedTerms
+                  ? "border-[#F15A24] bg-[#F15A24] text-white"
+                  : "border-[#CFCAC3] bg-transparent"
+              }`}
+            >
+              {acceptedTerms && <FiCheck className="h-3 w-3" />}
+            </span>
+
+            <span className="text-[11px] leading-5 text-[#8C877F]">
+              I agree to Melo&apos;s{" "}
+              <span
+                className="font-medium text-[#5F5A54] underline underline-offset-2"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onOpenTerms();
+                }}
+              >
+                Terms & Privacy Policy
+              </span>
+            </span>
+          </button>
+
+          {error && (
+            <motion.p
+              initial={{ opacity: 0, y: -5 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-5 border-l-2 border-red-400 bg-red-50/60 px-3 py-2.5 text-[12px] leading-5 text-red-600"
+            >
+              {error}
+            </motion.p>
+          )}
+
+          <button
+            type="submit"
+            disabled={isLoading || !acceptedTerms}
+            className="group mt-7 flex w-full items-center justify-between bg-[#181716] px-5 py-4 text-[13px] font-medium text-white transition-all hover:bg-[#292725] disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <span>
+              {isLoading ? "Creating your space..." : "Create account"}
+            </span>
+
+            {isLoading ? (
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+            ) : (
+              <FiArrowRight className="transition-transform group-hover:translate-x-1" />
+            )}
+          </button>
+        </motion.form>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.35 }}
+          className="mt-8"
+        >
+          <div className="mb-5 flex items-center gap-4">
+            <span className="h-px flex-1 bg-[#E7E3DD]" />
+            <span className="text-[10px] uppercase tracking-[0.14em] text-[#AAA49C]">
+              or
+            </span>
+            <span className="h-px flex-1 bg-[#E7E3DD]" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              className="flex h-11 items-center justify-center gap-2 border border-[#DEDAD4] bg-transparent text-[11px] font-medium text-[#5E5A54] transition-colors hover:bg-white"
+            >
+              <FcGoogle className="h-4 w-4" />
+              Google
+            </button>
+
+            <button
+              type="button"
+              className="flex h-11 items-center justify-center gap-2 border border-[#DEDAD4] bg-transparent text-[11px] font-medium text-[#5E5A54] transition-colors hover:bg-white"
+            >
+              <FaMicrosoft className="h-4 w-4 text-[#2F6FED]" />
+              Microsoft
+            </button>
+          </div>
+
+          <p className="mt-7 text-center text-[12px] text-[#8C877F]">
+            Already have an account?{" "}
+            <button
+              type="button"
+              onClick={() => navigate("/signin")}
+              className="font-medium text-[#F15A24] hover:underline"
+            >
+              Sign in
+            </button>
+          </p>
+        </motion.div>
+      </div>
+
+      <p className="text-center text-[10px] leading-5 text-[#AAA49C]">
+        Your Melo space is yours.
+      </p>
+    </div>
+  );
+}
 
 export default function SignUp() {
-	const [email, setEmail] = useState("");
-	const [password, setPassword] = useState("");
-	const [showPassword, setShowPassword] = useState(false);
-	const [showTermsModal, setShowTermsModal] = useState(false);
-	const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
-	const { register, isLoading, error } = useAuthStore();
-	const navigate = useNavigate();
-	const typedMessage = useTypewriter("Your mind deserves company.");
-	const words = typedMessage.split(" ");
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [mobileAuthOpen, setMobileAuthOpen] = useState(false);
 
-	const handleSubmit = async (
-        event: React.FormEvent<HTMLFormElement>
-    ) => {
-        event.preventDefault();
+  return (
+    <main className="min-h-screen overflow-hidden bg-[#FCFBF8] text-[#181716]">
+      <div className="hidden min-h-screen lg:flex">
+        <DesktopAside />
 
-        if (!email || !password || isLoading) {
-            return;
-        }
+        <section className="w-[46%] max-w-[650px]">
+          <SignupForm
+            onOpenTerms={() => setShowTermsModal(true)}
+          />
+        </section>
+      </div>
 
-        if (!hasAcceptedTerms) {
-            setShowTermsModal(true);
-            return;
-        }
+      <div className="lg:hidden">
+        <AnimatePresence mode="wait">
+          {!mobileAuthOpen ? (
+            <MobileIntro
+              key="intro"
+              onOpen={() => setMobileAuthOpen(true)}
+            />
+          ) : (
+            <motion.div
+              key="auth"
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{
+                duration: 0.55,
+                ease: [0.22, 1, 0.36, 1],
+              }}
+              className="min-h-screen"
+            >
+              <SignupForm
+                onBack={() => setMobileAuthOpen(false)}
+                onOpenTerms={() => setShowTermsModal(true)}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
-        try {
-            await register({
-                email,
-                password,
-                display_name: email.split("@")[0],
-            });
-
-            navigate("/signin");
-        } catch {
-            // AuthStore already stores the error.
-        }
-    };
-
-    	const acceptTermsAndContinue = async () => {
-        setHasAcceptedTerms(true);
-        setShowTermsModal(false);
-
-        try {
-            await register({
-                email,
-                password,
-                display_name: email.split("@")[0],
-            });
-
-            navigate("/signin");
-        } catch {
-            // AuthStore already stores the error.
-        }
-    };
-
-	return (
-		<main className="flex min-h-screen bg-white text-[#12111A]">
-			<section className="flex w-full flex-col px-6 py-8 sm:px-12 lg:w-[46%] lg:max-w-155 lg:px-20">
-				<motion.button
-					initial={{ opacity: 0, x: -8 }}
-					animate={{ opacity: 1, x: 0 }}
-					transition={{ duration: 0.3 }}
-					type="button"
-					onClick={() => navigate("/signin")}
-					className="flex w-fit items-center gap-2 text-[13px] font-medium text-[#77727A] hover:text-[#202020]"
-				>
-					<FiArrowLeft />
-					Back to sign in
-				</motion.button>
-
-				<div className="mx-auto flex w-full max-w-95 flex-1 flex-col justify-center py-12">
-					<motion.div
-						custom={0}
-						initial="hidden"
-						animate="visible"
-						variants={fieldVariants}
-						className="mb-9"
-					>
-						<div className="mb-5 flex h-10 w-10 items-center justify-center rounded-xl">
-							<img src={MainLogoCard} alt="melo" />
-						</div>
-
-						<h1 className="text-[32px] font-medium tracking-[-0.04em]">
-							Make room for more
-							<span className="text-[#159A9C]">.</span>
-						</h1>
-
-						<p className="mt-2 text-[14px] leading-6 text-[#8A8F98]">
-							One account for your ideas, questions, and everyday companion.
-						</p>
-					</motion.div>
-
-					<form onSubmit={handleSubmit} className="space-y-4">
-						<motion.label
-							custom={1}
-							initial="hidden"
-							animate="visible"
-							variants={fieldVariants}
-							className="block text-[12px] font-medium text-[#59545E]"
-						>
-							Email
-							<input
-								value={email}
-								onChange={(event) => setEmail(event.target.value)}
-								type="email"
-								autoComplete="email"
-								placeholder="you@example.com"
-								required
-								className="mt-2 block w-full rounded-xl border border-[#DFDDE2] px-4 py-3 text-[14px] outline-none placeholder:text-[#B1AEB5] transition-colors duration-200 focus:border-[#159A9C]"
-							/>
-						</motion.label>
-
-						<motion.label
-							custom={2}
-							initial="hidden"
-							animate="visible"
-							variants={fieldVariants}
-							className="block text-[12px] font-medium text-[#59545E]"
-						>
-							Password
-							<span className="relative mt-2 block">
-								<input
-									value={password}
-									onChange={(event) => setPassword(event.target.value)}
-									type={showPassword ? "text" : "password"}
-									autoComplete="new-password"
-									placeholder="At least 8 characters"
-									minLength={8}
-									required
-									className="block w-full rounded-xl border border-[#DFDDE2] px-4 py-3 pr-11 text-[14px] outline-none placeholder:text-[#B1AEB5] transition-colors duration-200 focus:border-[#159A9C]"
-								/>
-								<button
-									type="button"
-									aria-label={showPassword ? "Hide password" : "Show password"}
-									onClick={() => setShowPassword((visible) => !visible)}
-									className="absolute right-3 top-1/2 -translate-y-1/2 text-[#96919A] transition-colors hover:text-[#59545E]"
-								>
-									{showPassword ? <FiEyeOff /> : <FiEye />}
-								</button>
-							</span>
-						</motion.label>
-
-						<AnimatePresence>
-							{error && (
-								<motion.p
-									initial={{ opacity: 0, height: 0 }}
-									animate={{ opacity: 1, height: "auto" }}
-									exit={{ opacity: 0, height: 0 }}
-									transition={{ duration: 0.2 }}
-									className="overflow-hidden rounded-xl bg-red-50 px-4 py-3 text-[13px] text-red-600"
-								>
-									{error}
-								</motion.p>
-							)}
-						</AnimatePresence>
-
-						<motion.button
-							custom={3}
-							initial="hidden"
-							animate="visible"
-							variants={fieldVariants}
-							whileHover={{ y: -2 }}
-							whileTap={{ scale: 0.98 }}
-							type="submit"
-							disabled={isLoading}
-							className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#159A9C] px-4 py-3 text-[14px] font-medium text-white transition-colors hover:bg-[#117C7E] disabled:cursor-not-allowed disabled:opacity-60"
-						>
-							{isLoading ? (
-								<>
-									<span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-									Creating account...
-								</>
-							) : (
-								<>
-									Create account
-									<FiArrowRight />
-								</>
-							)}
-						</motion.button>
-					</form>
-
-					<motion.div
-						custom={4}
-						initial="hidden"
-						animate="visible"
-						variants={fieldVariants}
-						className="mt-6"
-					>
-						<div className="mb-4 flex items-center gap-3 text-xs text-[#AAA5AD]">
-							<span className="h-px flex-1 bg-[#ECE9ED]" />
-							or
-							<span className="h-px flex-1 bg-[#ECE9ED]" />
-						</div>
-
-						<div className="space-y-3">
-							<motion.button
-								whileHover={{ y: -1 }}
-								whileTap={{ scale: 0.98 }}
-								type="button"
-								className="flex w-full items-center justify-center gap-3 rounded-xl border border-[#DFDDE2] bg-white px-4 py-3 text-[14px] font-medium text-[#48434C] transition-colors hover:bg-[#FAF9FB]"
-							>
-								<FcGoogle className="h-5 w-5 shrink-0" />
-								<span>Continue with Google</span>
-							</motion.button>
-
-							<motion.button
-								whileHover={{ y: -1 }}
-								whileTap={{ scale: 0.98 }}
-								type="button"
-								className="flex w-full items-center justify-center gap-3 rounded-xl border border-[#DFDDE2] bg-white px-4 py-3 text-[14px] font-medium text-[#48434C] transition-colors hover:bg-[#FAF9FB]"
-							>
-								<FaMicrosoft className="h-5 w-5 shrink-0 text-[#2F6FED]" />
-								<span>Continue with Microsoft</span>
-							</motion.button>
-						</div>
-					</motion.div>
-
-					<motion.p
-						custom={5}
-						initial="hidden"
-						animate="visible"
-						variants={fieldVariants}
-						className="mt-7 text-center text-[13px] text-[#8A8F98]"
-					>
-						Already have an account?
-						<button
-							type="button"
-							onClick={() => navigate("/signin")}
-							className="font-medium text-[#159A9C] hover:underline"
-						>
-							Sign in
-						</button>
-					</motion.p>
-				</div>
-
-				<AnimatePresence>
-					{showTermsModal && (
-						<motion.div
-							initial={{ opacity: 0 }}
-							animate={{ opacity: 1 }}
-							exit={{ opacity: 0 }}
-							transition={{ duration: 0.2 }}
-							className="fixed inset-0 z-50 flex items-center justify-center bg-[#12111A]/40 p-4 backdrop-blur-[2px]"
-						>
-							<motion.div
-								initial={{ opacity: 0, y: 24, scale: 0.97 }}
-								animate={{ opacity: 1, y: 0, scale: 1 }}
-								exit={{ opacity: 0, y: 16, scale: 0.98 }}
-								transition={{ duration: 0.25, ease: "easeOut" }}
-								className="flex h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border border-[#ECE9ED] bg-white shadow-[0_28px_80px_rgba(18,17,26,0.18)]"
-							>
-								<div className="flex items-center justify-between border-b border-[#F1EFEF] px-5 py-4 sm:px-6">
-									<div className="flex items-center gap-3">
-										<div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#EAF9F6] text-[#159A9C]">
-											<FiShield className="h-4 w-4" />
-										</div>
-										<div>
-											<p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7E7A82]">Legal</p>
-											<h2 className="text-lg font-semibold text-[#1F1B22]">Terms & Privacy Policy</h2>
-										</div>
-									</div>
-
-									<button
-										type="button"
-										onClick={() => setShowTermsModal(false)}
-										className="rounded-lg p-2 text-[#6A6670] transition-colors hover:bg-[#F5F5F5] hover:text-[#1E1A21]"
-										aria-label="Close terms and privacy policy"
-									>
-										<FiX className="h-5 w-5" />
-									</button>
-								</div>
-
-								<div className="flex-1 overflow-y-auto px-5 py-5 sm:px-6">
-									<div className="space-y-4 text-[14px] leading-7 text-[#4C4651]">
-										<p>
-											Welcome to Melo. These Terms and Conditions and our Privacy Policy explain how we provide our AI-powered assistant, how we handle your information, and what rights and responsibilities apply when you use our platform.
-										</p>
-
-										{termsSections.map((section) => (
-											<div key={section.title}>
-												<h3 className="mb-2 text-[15px] font-semibold text-[#1D1A20]">{section.title}</h3>
-												<p>{section.body}</p>
-											</div>
-										))}
-
-										<div>
-											<h3 className="mb-2 text-[15px] font-semibold text-[#1D1A20]">13. Acceptance</h3>
-											<p>
-												By clicking "Accept and continue," you confirm that you have read, understood, and agree to these Terms and the Melo Privacy Policy. If you do not agree, you may not use Melo.
-											</p>
-										</div>
-									</div>
-								</div>
-
-								<div className="flex items-center justify-between gap-3 border-t border-[#F1EFEF] bg-[#FBFAFC] px-5 py-4 sm:px-6">
-									<button
-										type="button"
-										onClick={() => setShowTermsModal(false)}
-										className="rounded-xl border border-[#DFDDE2] px-4 py-2.5 text-[14px] font-medium text-[#4C4651] transition-colors hover:bg-white"
-									>
-										Decline
-									</button>
-									<motion.button
-										whileHover={{ y: -1 }}
-										whileTap={{ scale: 0.97 }}
-										type="button"
-										onClick={acceptTermsAndContinue}
-										className="rounded-xl bg-[#159A9C] px-4 py-2.5 text-[14px] font-medium text-white transition-colors hover:bg-[#117C7E]"
-									>
-										Accept and continue
-									</motion.button>
-								</div>
-							</motion.div>
-						</motion.div>
-					)}
-				</AnimatePresence>
-
-				<p className="text-center text-[11px] text-[#B0ABB2]">
-					Your account stays yours. We keep your conversations private.
-				</p>
-			</section>
-
-			<section className="hidden flex-1 items-center justify-center bg-[#FFF8EC] p-10 lg:flex">
-				<motion.div
-					initial={{ opacity: 0, y: 10 }}
-					animate={{ opacity: 1, y: 0 }}
-					transition={{ duration: 0.5 }}
-					className="max-w-130"
-				>
-					<p className="mb-5 text-xs font-semibold uppercase tracking-[0.2em] text-[#B08400]">
-						A little space to begin
-					</p>
-
-					<p className="min-h-[3.2em] text-[clamp(3.5rem,7vw,6rem)] font-semibold leading-[0.88] tracking-[-0.07em] text-[#25167D]">
-						{words.map((word, index) => (
-							<span
-								key={`${word}-${index}`}
-								className={index === 1 ? "text-[#FF6B4A]" : index === 2 ? "text-[#159A9C]" : ""}
-							>
-								{word}
-								{index < words.length - 1 ? " " : ""}
-							</span>
-						))}
-						<motion.span
-							animate={{ opacity: [1, 0] }}
-							transition={{ duration: 0.8, repeat: Infinity, repeatType: "reverse" }}
-							className="ml-1 inline-block h-[0.8em] w-1 bg-[#FF6B4A] align-[-0.08em]"
-							aria-hidden="true"
-						/>
-					</p>
-				</motion.div>
-			</section>
-		</main>
-	);
+      <AnimatePresence>
+        {showTermsModal && (
+          <LegalModal onClose={() => setShowTermsModal(false)} />
+        )}
+      </AnimatePresence>
+    </main>
+  );
 }
