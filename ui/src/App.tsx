@@ -44,6 +44,7 @@ function AppShell() {
     let conversationId = activeConversationId;
 
     if (!conversationId) {
+        // eslint-disable-next-line no-useless-assignment
         conversationId = await createNewConversation();
     }
 
