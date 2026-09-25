@@ -54,6 +54,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
   userId: storedAuth.userId,
   isAuthenticated: !!storedAuth.accessToken,
   isLoading: false,
+  displayName: null,
   error: null,
 
   login: async (data) => {
