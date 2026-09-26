@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { FiCode, FiImage, FiSmile } from "react-icons/fi";
+import { FiCode, FiImage, FiSmile, FiMenu } from "react-icons/fi";
 import mainLogoCard from "../assets/MainLogoCard.svg";
 import { getGreeting } from "../utils/greetings";
 
@@ -8,6 +8,7 @@ type ChatBoxProps = {
     displayName: string | null;
     onOpenSignIn?: () => void;
     onOpenSignUp?: () => void;
+    onOpenSidebar?: () => void;
 };
 
 export default function ChatBox({
@@ -15,6 +16,8 @@ export default function ChatBox({
     displayName,
     onOpenSignIn,
     onOpenSignUp,
+    onOpenSidebar
+
 }: ChatBoxProps) {
     const [message, setMessage] = useState("");
     const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -40,72 +43,79 @@ export default function ChatBox({
 
     return (
         <main className="flex min-w-0 flex-1 flex-col bg-white">
-            <header className="sticky top-0 z-40 flex h-16 items-center justify-between px-4 sm:px-8
-                bg-white/70 backdrop-blur-xl supports-backdrop-filter:bg-white/60
-                border-b border-white/20">
-
-                <div className="flex items-center">
-                    {/* menu button space if needed */}
-                </div>
-
-                <div className="flex items-center gap-2">
-                    {!isLoggedIn && (
-                        <>
-                            {/* Mobile: compact pill buttons */}
-                            <div className="flex items-center gap-2 md:hidden">
-                                <button
-                                    type="button"
-                                    onClick={onOpenSignIn}
-                                    className="cursor-pointer rounded-full px-3.5 py-1.5 text-xs font-medium
-                                    bg-white/80 backdrop-blur-md border border-[#E9E9E9]
-                                    text-[#12111A] shadow-[0_2px_10px_rgba(0,0,0,0.06)]
-                                    hover:bg-white hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] transition-all"
-                                >
-                                    Log in
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={onOpenSignUp}
-                                    className="cursor-pointer rounded-full px-3.5 py-1.5 text-xs font-medium
-                                    bg-[#12111A] text-white
-                                    shadow-[0_2px_12px_rgba(18,17,26,0.2)]
-                                    hover:bg-black hover:shadow-[0_4px_18px_rgba(18,17,26,0.3)]
-                                    backdrop-blur-md border border-white/10 transition-all"
-                                >
-                                    Sign up
-                                </button>
-                            </div>
-
-                            {/* Desktop: standard-sized buttons */}
-                            <div className="hidden items-center gap-2 md:flex">
-                                <button
-                                    type="button"
-                                    onClick={onOpenSignIn}
-                                    className="cursor-pointer rounded-full px-4 py-2 text-sm font-medium bg-white border border-[#E9E9E9] text-[#12111A] hover:bg-[#FAFAFA] transition"
-                                >
-                                    Log in
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={onOpenSignUp}
-                                    className="cursor-pointer rounded-full px-4 py-2 text-sm font-medium bg-[#12111A] text-white hover:bg-black transition"
-                                >
-                                    Sign up
-                                </button>
-                            </div>
-                        </>
-                    )}
-
-                    {isLoggedIn && (
-                        <button
-                            type="button"
-                            className="rounded-full px-3 py-2 text-sm font-medium text-[#5F6368] transition-colors hover:bg-[#F5F5F5] hover:text-[#202124]"
-                        >
-                            Melo
-                        </button>
-                    )}
-                </div>
-            </header>
+         <header className="sticky top-0 z-40 flex h-16 items-center justify-between px-4 sm:px-8
+             bg-white/70 backdrop-blur-xl supports-backdrop-filter:bg-white/60
+             border-b border-white/20">
+         
+             <div className="flex items-center">
+                 <button
+                     type="button"
+                     aria-label="Open sidebar"
+                     onClick={onOpenSidebar}
+                     className="rounded-lg p-2 text-[#5F6368] transition-colors hover:bg-[#F5F5F5] md:hidden"
+                 >
+                     <FiMenu className="h-5 w-5" />
+                 </button>
+             </div>
+         
+             <div className="flex items-center gap-2">
+                 {!isLoggedIn && (
+                     <>
+                         {/* Mobile: compact pill buttons */}
+                         <div className="flex items-center gap-2 md:hidden">
+                             <button
+                                 type="button"
+                                 onClick={onOpenSignIn}
+                                 className="cursor-pointer rounded-full px-3.5 py-1.5 text-xs font-medium
+                                 bg-white/80 backdrop-blur-md border border-[#E9E9E9]
+                                 text-[#12111A] shadow-[0_2px_10px_rgba(0,0,0,0.06)]
+                                 hover:bg-white hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] transition-all"
+                             >
+                                 Log in
+                             </button>
+                             <button
+                                 type="button"
+                                 onClick={onOpenSignUp}
+                                 className="cursor-pointer rounded-full px-3.5 py-1.5 text-xs font-medium
+                                 bg-[#12111A] text-white
+                                 shadow-[0_2px_12px_rgba(18,17,26,0.2)]
+                                 hover:bg-black hover:shadow-[0_4px_18px_rgba(18,17,26,0.3)]
+                                 backdrop-blur-md border border-white/10 transition-all"
+                             >
+                                 Sign up
+                             </button>
+                         </div>
+         
+                         {/* Desktop: standard-sized buttons */}
+                         <div className="hidden items-center gap-2 md:flex">
+                             <button
+                                 type="button"
+                                 onClick={onOpenSignIn}
+                                 className="cursor-pointer rounded-full px-4 py-2 text-sm font-medium bg-white border border-[#E9E9E9] text-[#12111A] hover:bg-[#FAFAFA] transition"
+                             >
+                                 Log in
+                             </button>
+                             <button
+                                 type="button"
+                                 onClick={onOpenSignUp}
+                                 className="cursor-pointer rounded-full px-4 py-2 text-sm font-medium bg-[#12111A] text-white hover:bg-black transition"
+                             >
+                                 Sign up
+                             </button>
+                         </div>
+                     </>
+                 )}
+         
+                 {isLoggedIn && (
+                     <button
+                         type="button"
+                         className="rounded-full px-3 py-2 text-sm font-medium text-[#5F6368] transition-colors hover:bg-[#F5F5F5] hover:text-[#202124]"
+                     >
+                         Melo
+                     </button>
+                 )}
+             </div>
+         </header>
 
             <section className="flex flex-1 flex-col items-center justify-center overflow-y-auto px-4 pb-8 pt-12 sm:px-5 sm:pb-10 sm:pt-0">
                 <div className="w-full max-w-180">
