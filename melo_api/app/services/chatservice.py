@@ -259,12 +259,13 @@ async def _prepare_turn(
                 for mem in retrieved_memories
             )
         )
-    
-        result = await db.execute(
-            select(Chat)
-            .where(Chat.conversation_id == conversation_id)
-            .order_by(Chat.created_at.asc())
-        )
+
+    # This must be OUTSIDE the if — we always need conversation history
+    result = await db.execute(
+        select(Chat)
+       .where(Chat.conversation_id == conversation_id)
+       .order_by(Chat.created_at.asc())
+    )
 
     messages = result.scalars().all()
 
