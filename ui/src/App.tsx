@@ -330,9 +330,11 @@ function AppShell() {
           <Settings onBack={() => setShowSettings(false)} />
       ) : messages.length === 0 ? (
           <ChatBox
-              onStartChat={handleStartChat}
-              displayName={displayName}
-          />
+            onStartChat={handleStartChat}
+            displayName={displayName}
+            onOpenSignIn={() => navigate("/signin")}
+            onOpenSignUp={() => navigate("/signup")}
+        />
       ) : ( 
 
         /*
