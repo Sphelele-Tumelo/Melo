@@ -298,17 +298,27 @@ function AppShell() {
           MOBILE SIDEBAR BACKDROP
           ====================================================== */}
 
-      {sidebarOpen && (
-        <button
-            type="button"
-            aria-label="Open sidebar"
-            onClick={() => setSidebarOpen(true)}
-            className="fixed left-4 top-4 z-50 rounded-lg bg-white p-2 text-[#5F6368] shadow-[0_2px_12px_rgba(18,17,26,0.1)] transition-colors hover:bg-[#F5F5F5] md:hidden"
-        >
-            <FiMenu className="h-5 w-5" />
-        </button>
-      )}
-
+      {/* Backdrop — shown only when sidebar is open, tapping it closes */}
+       {sidebarOpen && (
+         <button
+           type="button"
+           aria-label="Close sidebar"
+           onClick={() => setSidebarOpen(false)}
+           className="fixed inset-0 z-40 bg-[#12111A]/20 md:hidden"
+         />
+       )}
+       
+       {/* Hamburger — shown only when sidebar is closed, tapping it opens */}
+       {!sidebarOpen && (
+         <button
+           type="button"
+           aria-label="Open sidebar"
+           onClick={() => setSidebarOpen(true)}
+           className="fixed left-4 top-4 z-50 rounded-lg bg-white p-2 text-[#5F6368] shadow-[0_2px_12px_rgba(18,17,26,0.1)] transition-colors hover:bg-[#F5F5F5] md:hidden"
+         >
+           <FiMenu className="h-5 w-5" />
+         </button>
+       )}
 
       {/* ======================================================
           MOBILE SIDEBAR BUTTON

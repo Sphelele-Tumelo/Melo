@@ -6,7 +6,7 @@ from app.providers.base_provider import BaseModelProvider
 from groq import Groq
 
 MODEL_NAME = "openai/gpt-oss-120b"
-MAX_COMPLETION_TOKENS = 1200
+MAX_COMPLETION_TOKENS = 2500
 
 
 class GroqProvider(BaseModelProvider):

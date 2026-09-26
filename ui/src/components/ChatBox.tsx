@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { FiCode, FiImage, FiSmile, FiMenu } from "react-icons/fi";
 import mainLogoCard from "../assets/MainLogoCard.svg";
 import { getGreeting } from "../utils/greetings";
@@ -20,12 +20,11 @@ export default function ChatBox({
 
 }: ChatBoxProps) {
     const [message, setMessage] = useState("");
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-    useEffect(() => {
-        const token = localStorage.getItem("token") || localStorage.getItem("melo_token");
-        setIsLoggedIn(!!token || !!displayName);
-    }, [displayName]);
+    const isLoggedIn =
+        !!displayName ||
+        !!localStorage.getItem("token") ||
+        !!localStorage.getItem("melo_token");
 
     const suggestions = [
         { label: "Help me plan my day", icon: FiSmile },
@@ -61,6 +60,7 @@ export default function ChatBox({
              <div className="flex items-center gap-2">
                  {!isLoggedIn && (
                      <>
+                      
                          {/* Mobile: compact pill buttons */}
                          <div className="flex items-center gap-2 md:hidden">
                              <button
@@ -117,8 +117,28 @@ export default function ChatBox({
              </div>
          </header>
 
-            <section className="flex flex-1 flex-col items-center justify-center overflow-y-auto px-4 pb-8 pt-12 sm:px-5 sm:pb-10 sm:pt-0">
-                <div className="w-full max-w-180">
+        <section
+           className="
+             flex
+             min-w-0
+             min-h-0
+             w-full
+             max-w-full
+             flex-1
+             flex-col
+             items-center
+             justify-center
+             overflow-x-hidden
+             overflow-y-auto
+             px-4
+             pb-8
+             pt-12
+             sm:px-5
+             sm:pb-10
+             sm:pt-0
+           "
+            >
+                <div className="w-full min-w-0 max-w-180">
 
                     <div className="mb-10 text-center">
                         <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center">
@@ -149,7 +169,7 @@ export default function ChatBox({
                             event.preventDefault();
                             submitMessage();
                         }}
-                        className="rounded-2xl border border-[#DCDCDC] bg-white p-2 shadow-[0_4px_20px_rgba(18,17,26,0.06)] transition-shadow focus-within:border-[#BDBDBD] focus-within:shadow-[0_6px_26px_rgba(18,17,26,0.1)]"
+                        className="w-full min-w-0 overflow-hidden rounded-2xl border border-[#DCDCDC] bg-white p-2 shadow-[0_4px_20px_rgba(18,17,26,0.06)] transition-shadow focus-within:border-[#BDBDBD] focus-within:shadow-[0_6px_26px_rgba(18,17,26,0.1)]"
                     >
                         <textarea
                             value={message}

@@ -16,7 +16,7 @@ import {
 } from "react-icons/fi";
 import type { Message } from "../api/message";
 
-import MarkdownMessage from "./MarkdownMessage"
+import MarkdownMessage from "./MarkdownMessage";
 
 type ChatsProps = {
   messages: Message[];
@@ -41,7 +41,7 @@ function IconButton({
       aria-label={label}
       title={label}
       onClick={onClick}
-      className="rounded-lg p-1.5 text-[#969696] transition-colors hover:bg-[#F5F5F5] hover:text-[#363636]"
+      className="shrink-0 rounded-lg p-1.5 text-[#969696] transition-colors hover:bg-[#F5F5F5] hover:text-[#363636]"
     >
       {children}
     </button>
@@ -57,70 +57,62 @@ export default function Chats({
 }: ChatsProps) {
   const [draft, setDraft] = useState("");
   const [liked, setLiked] = useState<boolean | null>(null);
-  
-  // ✅ Changed from number | null to string | null
   const [copied, setCopied] = useState<string | null>(null);
-
-
   const [hasStartedResponse, setHasStartedResponse] = useState(false);
   const [voiceMode, setVoiceMode] = useState(false);
   const [thinkingLabel, setThinkingLabel] = useState("Thinking");
-
-
   const [showCatchUp, setShowCatchUp] = useState(false);
 
   const scrollContainerRef = useRef<HTMLElement>(null);
   const shouldAutoScrollRef = useRef(true);
 
   useEffect(() => {
-  const lastAssistantMessage = [...messages]
-    .reverse()
-    .find((message) => message.role === "assistant");
+    const lastAssistantMessage = [...messages]
+      .reverse()
+      .find((message) => message.role === "assistant");
 
-  if (lastAssistantMessage?.content) {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setHasStartedResponse(true);
-  }
+    if (lastAssistantMessage?.content) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setHasStartedResponse(true);
+    }
 
-  if (!isThinking) {
-    setHasStartedResponse(false);
-  }
-}, [messages, isThinking]);
+    if (!isThinking) {
+      setHasStartedResponse(false);
+    }
+  }, [messages, isThinking]);
 
+  useEffect(() => {
+    if (!shouldAutoScrollRef.current) return;
 
-useEffect(() => {
-  if (!shouldAutoScrollRef.current) return;
+    const container = scrollContainerRef.current;
 
-  const container = scrollContainerRef.current;
+    if (!container) return;
 
-  if (!container) return;
-
-  requestAnimationFrame(() => {
-    container.scrollTo({
-      top: container.scrollHeight,
-      behavior: "auto",
+    requestAnimationFrame(() => {
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: "auto",
+      });
     });
-  });
-}, [messages]);
+  }, [messages]);
 
-function handleScroll() {
-  const container = scrollContainerRef.current;
+  function handleScroll() {
+    const container = scrollContainerRef.current;
 
-  if (!container) return;
+    if (!container) return;
 
-  const distanceFromBottom =
-    container.scrollHeight -
-    container.scrollTop -
-    container.clientHeight;
+    const distanceFromBottom =
+      container.scrollHeight -
+      container.scrollTop -
+      container.clientHeight;
 
-  const nearBottom = distanceFromBottom < 120;
+    const nearBottom = distanceFromBottom < 120;
 
-  shouldAutoScrollRef.current = nearBottom;
+    shouldAutoScrollRef.current = nearBottom;
 
-  setShowCatchUp(!nearBottom && isThinking);
-}
+    setShowCatchUp(!nearBottom && isThinking);
+  }
 
-  
   useEffect(() => {
     if (!isThinking) return;
 
@@ -141,7 +133,9 @@ function handleScroll() {
       "Running the mental gymnastics",
       "Consulting the imaginary whiteboard",
     ];
+
     let labelIndex = 0;
+
     const interval = window.setInterval(() => {
       labelIndex = (labelIndex + 1) % thinkingLabels.length;
       setThinkingLabel(thinkingLabels[labelIndex]);
@@ -152,8 +146,12 @@ function handleScroll() {
 
   async function copyMessage(message: Message) {
     await navigator.clipboard?.writeText(message.content);
+
     setCopied(message.id);
-    window.setTimeout(() => setCopied(null), 1400);
+
+    window.setTimeout(() => {
+      setCopied(null);
+    }, 1400);
   }
 
   async function shareChat() {
@@ -163,12 +161,20 @@ function handleScroll() {
           `${message.role === "user" ? "You" : "Melo"}: ${message.content}`
       )
       .join("\n\n");
-    if (navigator.share) await navigator.share({ title: "Melo conversation", text });
-    else await navigator.clipboard?.writeText(text);
+
+    if (navigator.share) {
+      await navigator.share({
+        title: "Melo conversation",
+        text,
+      });
+    } else {
+      await navigator.clipboard?.writeText(text);
+    }
   }
 
   function submitDraft() {
     if (!draft.trim()) return;
+
     onSend(draft.trim());
     setDraft("");
   }
@@ -177,160 +183,304 @@ function handleScroll() {
     const lastUserMessage = [...messages]
       .reverse()
       .find((message) => message.role === "user");
-    if (lastUserMessage) setDraft(lastUserMessage.content);
+
+    if (lastUserMessage) {
+      setDraft(lastUserMessage.content);
+    }
   }
 
+  const lastAssistantMessage = [...messages]
+    .reverse()
+    .find((message) => message.role === "assistant");
+
   return (
-    <main className="flex min-w-0 flex-1 flex-col bg-white">
+    <main className="flex min-w-0 max-w-full flex-1 flex-col overflow-hidden bg-white">
+      {/* HEADER */}
       <header className="flex h-16 shrink-0 items-center justify-between border-b border-[#F0F0F0] px-4 pl-16 sm:px-7 sm:pl-7">
-        <span className="text-[14px] font-medium text-[#6F6F6F]">{conversationTitle || ""}</span>
-        <div className="flex items-center gap-1">
+        <span className="min-w-0 truncate text-[14px] font-medium text-[#6F6F6F]">
+          {conversationTitle || ""}
+        </span>
+
+        <div className="flex shrink-0 items-center gap-1">
           <IconButton label="Share conversation" onClick={shareChat}>
             <FiShare2 className="h-4 w-4" />
           </IconButton>
+
           <IconButton label="Restart conversation" onClick={onRestart}>
             <FiRefreshCw className="h-4 w-4" />
           </IconButton>
+
           <IconButton label="More options">
             <FiMoreHorizontal className="h-4 w-4" />
           </IconButton>
         </div>
       </header>
 
+      {/* CHAT SCROLL AREA */}
       <section
-  ref={scrollContainerRef}
-  onScroll={handleScroll}
-  className="min-h-0 flex-1 overflow-y-auto px-4 py-6 sm:px-5 sm:py-8"
->
-        <div className="mx-auto flex w-full max-w-180 flex-col gap-8">
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        className="
+          min-h-0
+          min-w-0
+          w-full
+          max-w-full
+          flex-1
+          overflow-x-hidden
+          overflow-y-auto
+          overscroll-y-contain
+          px-3
+          py-6
+          sm:px-5
+          sm:py-8
+        "
+      >
+        {/* MESSAGE COLUMN */}
+        <div
+          className="
+            mx-auto
+            flex
+            w-full
+            max-w-180
+            min-w-0
+            flex-col
+            gap-8
+          "
+        >
           <AnimatePresence initial={false} mode="popLayout">
             {messages
-              .filter((message) => !(message.role === "assistant" && message.content === ""))
-              .map((message, index) => (
-              <motion.article
-                key={message.id}
-                initial={{ opacity: 0, y: 18, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{
-                  duration: 0.32,
-                  delay: index === messages.length - 1 ? 0.05 : 0,
-                }}
-                className={
-                  message.role === "user" ? "flex justify-end" : "flex gap-3"
-                }
-              >
-                {message.role === "assistant" && (
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center">
-                    <img
-                      src={mainLogoCard}
-                      alt="Melo"
-                      className="h-full w-full object-contain"
-                    />
-                  </div>
-                )}
-                <div
-                  className={
-                    message.role === "user" ? "max-w-[78%]" : "max-w-[88%]"
-                  }
-                >
-                  <div className={message.role === "user" ? "..." : "pt-1 text-[16px] leading-7 text-[#303030]"}>
-                    {message.role === "assistant" ? (
-                      isThinking && message === [...messages].reverse().find(
-                        (item) => item.role === "assistant"
-                      ) ? (
-                        <div className="whitespace-pre-wrap">
-                          {message.content}
+              .filter(
+                (message) =>
+                  !(message.role === "assistant" && message.content === "")
+              )
+              .map((message, index) => {
+                const isUser = message.role === "user";
+                const isAssistant = message.role === "assistant";
+
+                const isLatestAssistant =
+                  message.id === lastAssistantMessage?.id;
+
+                return (
+                  <motion.article
+                    key={message.id}
+                    initial={{
+                      opacity: 0,
+                      y: 18,
+                      scale: 0.98,
+                    }}
+                    animate={{
+                      opacity: 1,
+                      y: 0,
+                      scale: 1,
+                    }}
+                    transition={{
+                      duration: 0.32,
+                      delay:
+                        index === messages.length - 1 ? 0.05 : 0,
+                    }}
+                    className={
+                      isUser
+                        ? "flex min-w-0 justify-end"
+                        : "flex min-w-0 items-start gap-3"
+                    }
+                  >
+                    {/* MELO LOGO */}
+                    {isAssistant && (
+                      <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center">
+                        <img
+                          src={mainLogoCard}
+                          alt="Melo"
+                          className="h-full w-full object-contain"
+                        />
+                      </div>
+                    )}
+
+                    {/* MESSAGE CONTENT */}
+                    <div
+                      className={
+                        isUser
+                          ? "min-w-0 max-w-[88%] sm:max-w-[78%]"
+                          : "min-w-0 max-w-[calc(100%-44px)] flex-1"
+                      }
+                    >
+                      <div
+                        className={
+                          isUser
+                            ? `
+                              min-w-0
+                              break-words
+                              [overflow-wrap:anywhere]
+                              rounded-2xl
+                              rounded-br-md
+                              bg-[#F4F4F4]
+                              px-4
+                              py-3
+                              text-[15px]
+                              leading-6
+                              text-[#202124]
+                            `
+                            : `
+                              min-w-0
+                              break-words
+                              [overflow-wrap:anywhere]
+                              pt-1
+                              text-[16px]
+                              leading-7
+                              text-[#303030]
+                            `
+                        }
+                      >
+                        {isAssistant ? (
+                          isThinking && isLatestAssistant ? (
+                            <div className="min-w-0 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
+                              {message.content}
+                            </div>
+                          ) : (
+                            <div className="min-w-0 max-w-full overflow-hidden">
+                              <MarkdownMessage content={message.content} />
+                            </div>
+                          )
+                        ) : (
+                          message.content
+                        )}
+                      </div>
+
+                      {/* ACTIONS */}
+                      {isUser ? (
+                        <div className="mt-1 flex justify-end">
+                          <IconButton
+                            label="Edit prompt"
+                            onClick={editLastPrompt}
+                          >
+                            <FiEdit2 className="h-3.5 w-3.5" />
+                          </IconButton>
                         </div>
                       ) : (
-                        <MarkdownMessage content={message.content} />
-                      )
-                    ) : (
-                      message.content
-                    )}
-                  </div>
-                  {message.role === "user" ? (
-                    <div className="mt-1 flex justify-end">
-                      <IconButton
-                        label="Edit prompt"
-                        onClick={editLastPrompt}
-                      >
-                        <FiEdit2 className="h-3.5 w-3.5" />
-                      </IconButton>
-                    </div>
-                  ) : (
-                    <div className="mt-2 flex items-center gap-0.5">
-                      <IconButton
-                        label={
-                          copied === message.id ? "Copied" : "Copy response"
-                        }
-                        onClick={() => copyMessage(message)}
-                      >
-                        <FiCopy className="h-3.5 w-3.5" />
-                      </IconButton>
-                      <IconButton label="Read response aloud">
-                        <FiVolume2 className="h-3.5 w-3.5" />
-                      </IconButton>
-                      <IconButton
-                        label="Like response"
-                        onClick={() => setLiked(true)}
-                      >
-                        <FiThumbsUp
-                          className={`h-3.5 w-3.5 ${
-                            liked === true ? "fill-[#FF5722] text-[#FF5722]" : ""
-                          }`}
-                        />
-                      </IconButton>
-                      <IconButton
-                        label="Dislike response"
-                        onClick={() => setLiked(false)}
-                      >
-                        <FiThumbsDown
-                          className={`h-3.5 w-3.5 ${
-                            liked === false ? "fill-[#FF5722] text-[#FF5722]" : ""
-                          }`}
-                        />
-                      </IconButton>
-                      <IconButton label="More response actions">
-                        <FiHeart className="h-3.5 w-3.5" />
-                      </IconButton>
-                    </div>
-                  )}
-                </div>
-              </motion.article>
-            ))}
+                        <div className="mt-2 flex max-w-full flex-wrap items-center gap-0.5">
+                          <IconButton
+                            label={
+                              copied === message.id
+                                ? "Copied"
+                                : "Copy response"
+                            }
+                            onClick={() => copyMessage(message)}
+                          >
+                            <FiCopy className="h-3.5 w-3.5" />
+                          </IconButton>
 
-           
+                          <IconButton label="Read response aloud">
+                            <FiVolume2 className="h-3.5 w-3.5" />
+                          </IconButton>
+
+                          <IconButton
+                            label="Like response"
+                            onClick={() => setLiked(true)}
+                          >
+                            <FiThumbsUp
+                              className={
+                                liked === true
+                                  ? "h-3.5 w-3.5 fill-[#FF5722] text-[#FF5722]"
+                                  : "h-3.5 w-3.5"
+                              }
+                            />
+                          </IconButton>
+
+                          <IconButton
+                            label="Dislike response"
+                            onClick={() => setLiked(false)}
+                          >
+                            <FiThumbsDown
+                              className={
+                                liked === false
+                                  ? "h-3.5 w-3.5 fill-[#FF5722] text-[#FF5722]"
+                                  : "h-3.5 w-3.5"
+                              }
+                            />
+                          </IconButton>
+
+                          <IconButton label="More response actions">
+                            <FiHeart className="h-3.5 w-3.5" />
+                          </IconButton>
+                        </div>
+                      )}
+                    </div>
+                  </motion.article>
+                );
+              })}
           </AnimatePresence>
 
+          {/* CATCH UP */}
+          <AnimatePresence>
+            {showCatchUp && (
+              <motion.button
+                initial={{
+                  opacity: 0,
+                  y: 10,
+                }}
+                animate={{
+                  opacity: 1,
+                  y: 0,
+                }}
+                exit={{
+                  opacity: 0,
+                  y: 10,
+                }}
+                type="button"
+                onClick={() => {
+                  const container = scrollContainerRef.current;
 
-          {showCatchUp && (
-            <button
-              type="button"
-              onClick={() => {
-                const container = scrollContainerRef.current;
-          
-                if (!container) return;
-          
-                shouldAutoScrollRef.current = true;
-                setShowCatchUp(false);
-          
-                container.scrollTo({
-                  top: container.scrollHeight,
-                  behavior: "smooth",
-                });
-              }}
-            >
-              ↓
-            </button>
-          )}
+                  if (!container) return;
 
+                  shouldAutoScrollRef.current = true;
+                  setShowCatchUp(false);
+
+                  container.scrollTo({
+                    top: container.scrollHeight,
+                    behavior: "smooth",
+                  });
+                }}
+                className="
+                  sticky
+                  bottom-4
+                  z-10
+                  mx-auto
+                  flex
+                  h-9
+                  w-9
+                  items-center
+                  justify-center
+                  rounded-full
+                  border
+                  border-[#E5E5E5]
+                  bg-white
+                  text-[#666]
+                  shadow-[0_4px_16px_rgba(0,0,0,0.08)]
+                  transition
+                  hover:bg-[#F7F7F7]
+                "
+              >
+                ↓
+              </motion.button>
+            )}
+          </AnimatePresence>
+
+          {/* THINKING */}
           <AnimatePresence>
             {isThinking && !hasStartedResponse && (
               <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                className="flex items-center gap-3"
+                initial={{
+                  opacity: 0,
+                  y: 10,
+                }}
+                animate={{
+                  opacity: 1,
+                  y: 0,
+                }}
+                exit={{
+                  opacity: 0,
+                  y: -8,
+                }}
+                className="flex min-w-0 items-center gap-3"
               >
                 <motion.div
                   animate={{
@@ -347,7 +497,7 @@ function handleScroll() {
                     repeat: Infinity,
                     ease: "easeInOut",
                   }}
-                  className="flex h-9 w-9 items-center justify-center"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center"
                 >
                   <img
                     src={mainLogoCard}
@@ -355,19 +505,35 @@ function handleScroll() {
                     className="h-full w-full"
                   />
                 </motion.div>
+
                 <AnimatePresence mode="wait">
                   <motion.span
                     key={thinkingLabel}
-                    initial={{ opacity: 0, y: 5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -5 }}
-                    className="text-[13px] font-medium text-[#8A8F98]"
+                    initial={{
+                      opacity: 0,
+                      y: 5,
+                    }}
+                    animate={{
+                      opacity: 1,
+                      y: 0,
+                    }}
+                    exit={{
+                      opacity: 0,
+                      y: -5,
+                    }}
+                    className="min-w-0 text-[13px] font-medium text-[#8A8F98]"
                   >
                     {thinkingLabel}
+
                     <span className="inline-block w-6 text-left">
                       <motion.span
-                        animate={{ opacity: [0, 1, 0] }}
-                        transition={{ duration: 1.2, repeat: Infinity }}
+                        animate={{
+                          opacity: [0, 1, 0],
+                        }}
+                        transition={{
+                          duration: 1.2,
+                          repeat: Infinity,
+                        }}
                       >
                         ...
                       </motion.span>
@@ -380,13 +546,28 @@ function handleScroll() {
         </div>
       </section>
 
-      <div className="w-full shrink-0 px-3 pb-3 sm:px-5 sm:pb-5">
+      {/* COMPOSER */}
+      <div className="w-full min-w-0 shrink-0 px-3 pb-3 sm:px-5 sm:pb-5">
         <form
           onSubmit={(event) => {
             event.preventDefault();
             submitDraft();
           }}
-          className="mx-auto max-w-180 rounded-2xl border border-[#DCDCDC] bg-white p-2 shadow-[0_4px_20px_rgba(18,17,26,0.06)] focus-within:border-[#BDBDBD]"
+          className="
+            mx-auto
+            w-full
+            max-w-180
+            min-w-0
+            overflow-hidden
+            rounded-2xl
+            border
+            border-[#DCDCDC]
+            bg-white
+            p-2
+            shadow-[0_4px_20px_rgba(18,17,26,0.06)]
+            transition
+            focus-within:border-[#BDBDBD]
+          "
         >
           <textarea
             value={draft}
@@ -399,16 +580,33 @@ function handleScroll() {
             }}
             rows={2}
             placeholder={
-              voiceMode ? "Voice mode is ready..." : "Message Melo..."
+              voiceMode
+                ? "Voice mode is ready..."
+                : "Message Melo..."
             }
             aria-label="Message Melo"
-            className="block w-full resize-none bg-transparent px-3 py-2 text-[16px] font-medium text-[#12111A] outline-none placeholder:text-[#A0A0A0]"
+            className="
+              block
+              w-full
+              min-w-0
+              resize-none
+              bg-transparent
+              px-3
+              py-2
+              text-[16px]
+              font-medium
+              text-[#12111A]
+              outline-none
+              placeholder:text-[#A0A0A0]
+            "
           />
-          <div className="flex items-center justify-between px-1">
+
+          <div className="flex min-w-0 items-center justify-between px-1">
             <IconButton label="Attach a file">
               <FiPaperclip className="h-4 w-4" />
             </IconButton>
-            <div className="flex items-center gap-1">
+
+            <div className="flex shrink-0 items-center gap-1">
               <button
                 type="button"
                 aria-label="Toggle voice mode"
@@ -422,17 +620,33 @@ function handleScroll() {
               >
                 <FiVolume2 className="h-4 w-4" />
               </button>
+
               <button
                 type="submit"
                 aria-label="Send message"
                 disabled={!draft.trim()}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FF5722] text-white transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-35"
+                className="
+                  flex
+                  h-8
+                  w-8
+                  shrink-0
+                  items-center
+                  justify-center
+                  rounded-full
+                  bg-[#FF5722]
+                  text-white
+                  transition-opacity
+                  hover:opacity-85
+                  disabled:cursor-not-allowed
+                  disabled:opacity-35
+                "
               >
                 <FiArrowUp className="h-4 w-4" />
               </button>
             </div>
           </div>
         </form>
+
         <p className="mt-3 text-center text-[11px] text-[#A0A0A0]">
           Melo is AI and can make mistakes. Check important information.
         </p>
