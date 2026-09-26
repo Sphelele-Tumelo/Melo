@@ -41,7 +41,7 @@ export default function ChatBox({
     return (
         <main className="flex min-w-0 flex-1 flex-col bg-white">
             <header className="sticky top-0 z-40 flex h-16 items-center justify-between px-4 sm:px-8
-                bg-white/70 backdrop-blur-xl supports-[backdrop-filter]:bg-white/60
+                bg-white/70 backdrop-blur-xl supports-backdrop-filter:bg-white/60
                 border-b border-white/20">
 
                 <div className="flex items-center">
