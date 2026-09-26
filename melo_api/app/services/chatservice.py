@@ -244,16 +244,27 @@ async def _prepare_turn(
     retrieved_memories = memory_results.get("documents", [[]])[0] if memory_results else []
 
     memory_context = ""
-    if retrieved_memories:
-        memory_context = "\n\nRelevant things you know about this user:\n" + "\n".join(
-            f"- {mem}" for mem in retrieved_memories
-        )
 
-    result = await db.execute(
-        select(Chat)
-        .where(Chat.conversation_id == conversation_id)
-        .order_by(Chat.created_at.asc())
-    )
+    if retrieved_memories:
+        memory_context = (
+            "\n\n"
+            "=========================\n"
+            "CURRENT USER CONTEXT\n"
+            "=========================\n"
+            "The following information belongs only to the current user. "
+            "Use it naturally when relevant. Do not assume information "
+            "that is not present here.\n\n"
+            + "\n".join(
+                f"- {mem}"
+                for mem in retrieved_memories
+            )
+        )
+    
+        result = await db.execute(
+            select(Chat)
+            .where(Chat.conversation_id == conversation_id)
+            .order_by(Chat.created_at.asc())
+        )
 
     messages = result.scalars().all()
 
