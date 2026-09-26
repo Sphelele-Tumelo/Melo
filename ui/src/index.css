@@ -13,5 +13,6 @@ html, body, #root {
   overscroll-behavior: none;
   background: #171615;
   padding-bottom: env(safe-area-inset-bottom);
+  
 }
 

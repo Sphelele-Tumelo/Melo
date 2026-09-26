@@ -39,7 +39,6 @@ export default function Sidebar({
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Desktop-only collapse state, persisted across reloads
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return localStorage.getItem("melo-sidebar-collapsed") === "true";
@@ -73,12 +72,31 @@ export default function Sidebar({
     >
       {/* Header */}
       <div className={`flex items-center gap-2 px-2 py-1 ${collapsed ? "md:justify-center md:px-0" : ""}`}>
-        <a href="/" aria-label="Melo home" className="flex items-center gap-2">
-          <img src={melo} alt="Melo logo" className="h-5 w-5 shrink-0" />
-          <h2 className={`text-[16px] font-semibold tracking-tight text-[#FF5722] ${collapsed ? "md:hidden" : ""}`}>
-            Melo
-          </h2>
-        </a>
+        {collapsed ? (
+          <button
+            type="button"
+            aria-label="Expand sidebar"
+            onClick={() => setCollapsed(false)}
+            className="hidden h-8 w-8 items-center justify-center rounded-md hover:bg-[#F5F5F5] md:flex"
+          >
+            <img src={melo} alt="Melo logo" className="h-5 w-5" />
+          </button>
+        ) : (
+          <a href="/" aria-label="Melo home" className="flex items-center gap-2">
+            <img src={melo} alt="Melo logo" className="h-5 w-5 shrink-0" />
+            <h2 className="text-[16px] font-semibold tracking-tight text-[#FF5722]">
+              Melo
+            </h2>
+          </a>
+        )}
+
+        {/* Mobile logo — shown when desktop is collapsed but mobile sidebar is open */}
+        {collapsed && (
+          <a href="/" aria-label="Melo home" className="flex items-center gap-2 md:hidden">
+            <img src={melo} alt="Melo logo" className="h-5 w-5" />
+            <h2 className="text-[16px] font-semibold tracking-tight text-[#FF5722]">Melo</h2>
+          </a>
+        )}
 
         {/* Mobile-only close button */}
         <button
@@ -90,20 +108,20 @@ export default function Sidebar({
           <FiSidebar className="h-4 w-4" />
         </button>
 
-        {/* Desktop-only collapse toggle */}
-        <button
-          type="button"
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          onClick={() => setCollapsed((prev) => !prev)}
-          className={`hidden rounded-md p-1.5 text-[#5F6368] transition-colors hover:bg-[#F5F5F5] hover:text-[#202124] md:inline-flex ${
-            collapsed ? "" : "ml-auto"
-          }`}
-        >
-          <FiSidebar className="h-4 w-4" />
-        </button>
+        {/* Desktop-only collapse toggle — only shown when expanded */}
+        {!collapsed && (
+          <button
+            type="button"
+            aria-label="Collapse sidebar"
+            onClick={() => setCollapsed(true)}
+            className="ml-auto hidden rounded-md p-1.5 text-[#5F6368] transition-colors hover:bg-[#F5F5F5] hover:text-[#202124] md:inline-flex"
+          >
+            <FiSidebar className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
-      {/* Main Navigation — full version, hidden on desktop when collapsed */}
+      {/* Main Navigation — hidden on desktop when collapsed */}
       <nav className={`mt-5 space-y-0.5 ${collapsed ? "md:hidden" : ""}`} aria-label="Main navigation">
         <button
           type="button"
@@ -120,29 +138,6 @@ export default function Sidebar({
         >
           <FiSearch className="h-4 w-4 shrink-0" />
           <span>Search</span>
-        </button>
-      </nav>
-
-      {/* Icon-only nav — only visible on desktop when collapsed */}
-      <nav
-        className={`mt-5 hidden flex-col items-center gap-2 ${collapsed ? "md:flex" : ""}`}
-        aria-label="Main navigation (collapsed)"
-      >
-        <button
-          type="button"
-          aria-label="New chat"
-          onClick={onNewChat}
-          className="flex h-9 w-9 items-center justify-center rounded-md text-[#5F6368] transition-colors hover:bg-[#F5F5F5] hover:text-[#202124]"
-        >
-          <FiEdit3 className="h-4.5 w-4.5" />
-        </button>
-
-        <button
-          type="button"
-          aria-label="Search"
-          className="flex h-9 w-9 items-center justify-center rounded-md text-[#5F6368] transition-colors hover:bg-[#F5F5F5] hover:text-[#202124]"
-        >
-          <FiSearch className="h-4.5 w-4.5" />
         </button>
       </nav>
 
