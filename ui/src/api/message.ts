@@ -9,6 +9,7 @@ export interface Message {
   role: MessageRole;
   content: string;
   created_at: string;
+  stopped?: boolean; // client-side only — true if generation was interrupted
 }
 
 export interface MessageCreate {
@@ -20,6 +21,7 @@ export async function streamMessage(
   content: string,
   onChunk: (chunk: string) => void,
   onComplete: (messageId: string) => void,
+  signal?: AbortSignal,
 ): Promise<void> {
   const accessToken = getAccessToken();
 
@@ -36,6 +38,7 @@ export async function streamMessage(
       body: JSON.stringify({
         content,
       }),
+      signal,
     }
   );
 

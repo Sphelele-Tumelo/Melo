@@ -9,6 +9,8 @@ import {
 
 import { FiMenu, FiX } from "react-icons/fi";
 
+import Spinner from "./components/Spinner";
+
 import Sidebar from "./components/Sidebar";
 import ChatBox from "./components/ChatBox";
 import Chats from "./components/Chats";
@@ -128,8 +130,10 @@ function AppShell() {
     messages,
     activeConversationId,
     isThinking,
+    isLoadingMessages,
     createNewConversation,
     loadConversations,
+    stopGeneration,
     loadMessages,
     sendMessage,
     deleteConversation,
@@ -330,7 +334,11 @@ function AppShell() {
 
       {showSettings ? (
           <Settings onBack={() => setShowSettings(false)} />
-      ) : messages.length === 0 ? (
+          ) : isLoadingMessages ? (
+               <div className="flex flex-1 items-center justify-center bg-white">
+                   <Spinner size={36} />
+               </div>
+           ) : messages.length === 0 ? (
           <ChatBox
             onStartChat={handleStartChat}
             displayName={displayName}
@@ -351,6 +359,7 @@ function AppShell() {
             activeConversation?.title || "Melo"
           }
           onSend={sendMessage}
+          onStop={stopGeneration}
           onRestart={restartConversation}
         />
       )}

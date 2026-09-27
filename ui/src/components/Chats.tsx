@@ -10,6 +10,8 @@ import {
   FiPaperclip,
   FiRefreshCw,
   FiShare2,
+  FiMic,
+  FiSquare,
   FiThumbsDown,
   FiThumbsUp,
   FiVolume2,
@@ -23,6 +25,7 @@ type ChatsProps = {
   isThinking: boolean;
   conversationTitle: string;
   onSend: (content: string) => void;
+  onStop: () => void;   // new
   onRestart: () => void;
 };
 
@@ -53,6 +56,7 @@ export default function Chats({
   isThinking,
   conversationTitle,
   onSend,
+  onStop, 
   onRestart,
 }: ChatsProps) {
   const [draft, setDraft] = useState("");
@@ -95,6 +99,17 @@ export default function Chats({
       });
     });
   }, [messages]);
+
+
+  function retryLastPrompt() {
+  const lastUserMessage = [...messages]
+    .reverse()
+    .find((message) => message.role === "user");
+
+  if (lastUserMessage) {
+    onSend(lastUserMessage.content);
+  }
+}
 
   function handleScroll() {
     const container = scrollContainerRef.current;
@@ -344,18 +359,26 @@ export default function Chats({
                           message.content
                         )}
                       </div>
+                      
 
                       {/* ACTIONS */}
-                      {isUser ? (
-                        <div className="mt-1 flex justify-end">
-                          <IconButton
-                            label="Edit prompt"
-                            onClick={editLastPrompt}
-                          >
-                            <FiEdit2 className="h-3.5 w-3.5" />
-                          </IconButton>
-                        </div>
-                      ) : (
+                      { isUser ? (
+                      <div className="mt-1 flex justify-end">
+                        <IconButton label="Edit prompt" onClick={editLastPrompt}>
+                          <FiEdit2 className="h-3.5 w-3.5" />
+                        </IconButton>
+                      </div>
+                    ) : message.stopped ? (
+                      <div className="mt-2 flex items-center gap-2">
+                        <span className="text-[12px] text-[#A0A0A0]">Stopped by the user</span>
+                        <IconButton label="Edit prompt" onClick={editLastPrompt}>
+                          <FiEdit2 className="h-3.5 w-3.5" />
+                        </IconButton>
+                        <IconButton label="Retry" onClick={retryLastPrompt}>
+                          <FiRefreshCw className="h-3.5 w-3.5" />
+                        </IconButton>
+                      </div>
+                    ) : (
                         <div className="mt-2 flex max-w-full flex-wrap items-center gap-0.5">
                           <IconButton
                             label={
@@ -605,45 +628,42 @@ export default function Chats({
             <IconButton label="Attach a file">
               <FiPaperclip className="h-4 w-4" />
             </IconButton>
-
-            <div className="flex shrink-0 items-center gap-1">
-              <button
-                type="button"
-                aria-label="Toggle voice mode"
-                title="Voice mode"
-                onClick={() => setVoiceMode((active) => !active)}
-                className={`rounded-lg p-2 transition-colors ${
-                  voiceMode
-                    ? "bg-[#FFF0E9] text-[#FF5722]"
-                    : "text-[#8A8F98] hover:bg-[#F5F5F5] hover:text-[#202124]"
-                }`}
-              >
-                <FiVolume2 className="h-4 w-4" />
-              </button>
-
-              <button
-                type="submit"
-                aria-label="Send message"
-                disabled={!draft.trim()}
-                className="
-                  flex
-                  h-8
-                  w-8
-                  shrink-0
-                  items-center
-                  justify-center
-                  rounded-full
-                  bg-[#FF5722]
-                  text-white
-                  transition-opacity
-                  hover:opacity-85
-                  disabled:cursor-not-allowed
-                  disabled:opacity-35
-                "
-              >
-                <FiArrowUp className="h-4 w-4" />
-              </button>
-            </div>
+       
+          <div className="flex shrink-0 items-center gap-1">
+         <button
+           type="button"
+           aria-label="Voice input"
+           title="Voice input"
+           onClick={() => setVoiceMode((active) => !active)}
+           className={`rounded-lg p-2 transition-colors ${
+             voiceMode
+               ? "bg-[#FFF0E9] text-[#FF5722]"
+               : "text-[#8A8F98] hover:bg-[#F5F5F5] hover:text-[#202124]"
+           }`}
+         >
+           <FiMic className="h-4 w-4" />
+         </button>
+       
+         {isThinking ? (
+           <button
+             type="button"
+             aria-label="Stop generating"
+             onClick={onStop}
+             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#12111A] text-white transition-opacity hover:opacity-85"
+           >
+             <FiSquare className="h-3.5 w-3.5 fill-white" />
+           </button>
+         ) : (
+           <button
+             type="submit"
+             aria-label="Send message"
+             disabled={!draft.trim()}
+             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#FF5722] text-white transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-35"
+           >
+             <FiArrowUp className="h-4 w-4" />
+           </button>
+         )}
+       </div>
           </div>
         </form>
 
