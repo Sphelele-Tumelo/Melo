@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { FiCode, FiImage, FiSmile, FiMenu } from "react-icons/fi";
 import mainLogoCard from "../assets/MainLogoCard.svg";
+import ComposerTools from "./ComposerTools";
 import { getGreeting } from "../utils/greetings";
 
 type ChatBoxProps = {
-    onStartChat: (message: string) => void;
+    onStartChat: (message: string, options?: { webSearch?: boolean }) => void;
     displayName: string | null;
     onOpenSignIn?: () => void;
     onOpenSignUp?: () => void;
@@ -20,6 +21,7 @@ export default function ChatBox({
 
 }: ChatBoxProps) {
     const [message, setMessage] = useState("");
+    const [webSearch, setWebSearch] = useState(false);
 
     const isLoggedIn =
         !!displayName ||
@@ -36,7 +38,7 @@ export default function ChatBox({
 
     function submitMessage() {
         if (!message.trim()) return;
-        onStartChat(message.trim());
+        onStartChat(message.trim(), { webSearch });
         setMessage("");
     }
 
@@ -169,7 +171,7 @@ export default function ChatBox({
                             event.preventDefault();
                             submitMessage();
                         }}
-                        className="w-full min-w-0 overflow-hidden rounded-2xl border border-[#DCDCDC] bg-white p-2 shadow-[0_4px_20px_rgba(18,17,26,0.06)] transition-shadow focus-within:border-[#BDBDBD] focus-within:shadow-[0_6px_26px_rgba(18,17,26,0.1)]"
+                        className="w-full min-w-0 rounded-2xl border border-[#DCDCDC] bg-white p-2 shadow-[0_4px_20px_rgba(18,17,26,0.06)] transition-shadow focus-within:border-[#BDBDBD] focus-within:shadow-[0_6px_26px_rgba(18,17,26,0.1)]"
                     >
                         <textarea
                             value={message}
@@ -186,7 +188,10 @@ export default function ChatBox({
                             className="block w-full resize-none bg-transparent px-3 py-2 text-[16px] font-medium text-[#12111A] outline-none placeholder:text-[#A0A0A0]"
                         />
                         <div className="flex items-center justify-between px-1">
-                            <span />
+                            <ComposerTools
+                              webSearch={webSearch}
+                              onToggleWebSearch={() => setWebSearch((current) => !current)}
+                            />
                             <button
                                 type="submit"
                                 aria-label="Start chat"

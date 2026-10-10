@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 class MessageCreate(BaseModel):
     content: str = Field(min_length=1)
+    web_search: bool = False
 
 
 class MessageResponse(BaseModel):

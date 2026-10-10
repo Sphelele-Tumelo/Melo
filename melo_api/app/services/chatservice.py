@@ -10,6 +10,7 @@ from app.core.prompts import MELO_SYSTEM_PROMPT
 from app.data.chroma import ChromaDatabase
 from app.models.chat import Chat, MessageRole
 from app.models.conversation import Conversation
+from app.services.web_search_service import fetch_web_context, needs_web_search
 from app.services.embeddings_service import EmbeddingService
 from app.services.memory_service import create_memory
 from app.services.model_router import get_model_provider
@@ -260,11 +261,31 @@ async def _prepare_turn(
             )
         )
 
+    use_web_search = message_data.web_search or needs_web_search(
+        message_data.content
+    )
+
+    web_context = ""
+    web_sources = []
+
+    if use_web_search:
+        print("🌐 WEB SEARCH TRIGGERED", flush=True)
+
+        web_context, web_sources = await fetch_web_context(
+            message_data.content
+        )
+
+        print(
+            f"🌐 web context chars: {len(web_context)} | "
+            f"sources: {len(web_sources)}",
+            flush=True,
+        )
+
     # This must be OUTSIDE the if — we always need conversation history
     result = await db.execute(
         select(Chat)
-       .where(Chat.conversation_id == conversation_id)
-       .order_by(Chat.created_at.asc())
+        .where(Chat.conversation_id == conversation_id)
+        .order_by(Chat.created_at.asc())
     )
 
     messages = result.scalars().all()
@@ -280,7 +301,7 @@ async def _prepare_turn(
     return [
         {
             "role": "system",
-            "content": MELO_SYSTEM_PROMPT + memory_context,
+            "content": MELO_SYSTEM_PROMPT + memory_context + web_context,
         },
         *conversation_messages,
     ]

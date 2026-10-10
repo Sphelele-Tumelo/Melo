@@ -18,6 +18,7 @@ interface ChatState {
   currentAbortController: AbortController | null;
 
   deleteConversation: (conversationId: string) => Promise<void>;
+  sendMessage: (content: string, options?: { webSearch?: boolean }) => Promise<void>;
   createNewConversation: () => Promise<string>;
   togglePin: (conversationId: string) => Promise<void>;
   loadConversations: () => Promise<void>;
@@ -179,6 +180,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           }, 20);
         },
         abortController.signal,
+        options?.webSearch ?? false,
       );
     } catch (err) {
       typewriter.stop();

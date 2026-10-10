@@ -1,13 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import mainLogoCard from "../assets/MainLogoCard.svg";
+import MeloLogo from "./MeloLogo";
 import {
   FiArrowUp,
   FiCopy,
   FiEdit2,
   FiHeart,
   FiMoreHorizontal,
-  FiPaperclip,
   FiRefreshCw,
   FiShare2,
   FiMic,
@@ -19,12 +18,13 @@ import {
 import type { Message } from "../api/message";
 
 import MarkdownMessage from "./MarkdownMessage";
+import ComposerTools from "./ComposerTools";
 
 type ChatsProps = {
   messages: Message[];
   isThinking: boolean;
   conversationTitle: string;
-  onSend: (content: string) => void;
+  onSend: (content: string, options?: { webSearch?: boolean }) => void;
   onStop: () => void;   // new
   onRestart: () => void;
 };
@@ -60,6 +60,9 @@ export default function Chats({
   onRestart,
 }: ChatsProps) {
   const [draft, setDraft] = useState("");
+  
+  const [webSearch, setWebSearch] = useState(false);
+
   const [liked, setLiked] = useState<boolean | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [hasStartedResponse, setHasStartedResponse] = useState(false);
@@ -107,7 +110,7 @@ export default function Chats({
     .find((message) => message.role === "user");
 
   if (lastUserMessage) {
-    onSend(lastUserMessage.content);
+    onSend(lastUserMessage.content, { webSearch });
   }
 }
 
@@ -190,7 +193,7 @@ export default function Chats({
   function submitDraft() {
     if (!draft.trim()) return;
 
-    onSend(draft.trim());
+    onSend(draft.trim(), { webSearch });
     setDraft("");
   }
 
@@ -302,10 +305,9 @@ export default function Chats({
                     {/* MELO LOGO */}
                     {isAssistant && (
                       <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center">
-                        <img
-                          src={mainLogoCard}
-                          alt="Melo"
-                          className="h-full w-full object-contain"
+                        <MeloLogo
+                          isThinking={isThinking && isLatestAssistant}
+                          label={isThinking && isLatestAssistant ? "Melo is thinking" : "Melo"}
                         />
                       </div>
                     )}
@@ -505,29 +507,11 @@ export default function Chats({
                 }}
                 className="flex min-w-0 items-center gap-3"
               >
-                <motion.div
-                  animate={{
-                    scale: [1, 1.08, 1],
-                    rotate: [-3, 3, -3],
-                    boxShadow: [
-                      "0 0 0 0 rgba(255, 87, 34, 0)",
-                      "0 0 0 7px rgba(255, 87, 34, 0.10)",
-                      "0 0 0 0 rgba(255, 87, 34, 0)",
-                    ],
-                  }}
-                  transition={{
-                    duration: 1.8,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                  }}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center"
-                >
-                  <img
-                    src={mainLogoCard}
-                    alt="Melo is thinking"
-                    className="h-full w-full"
-                  />
-                </motion.div>
+                <MeloLogo
+                  isThinking
+                  label="Melo is thinking"
+                  className="h-9 w-9 shrink-0"
+                />
 
                 <AnimatePresence mode="wait">
                   <motion.span
@@ -581,7 +565,6 @@ export default function Chats({
             w-full
             max-w-180
             min-w-0
-            overflow-hidden
             rounded-2xl
             border
             border-[#DCDCDC]
@@ -625,9 +608,10 @@ export default function Chats({
           />
 
           <div className="flex min-w-0 items-center justify-between px-1">
-            <IconButton label="Attach a file">
-              <FiPaperclip className="h-4 w-4" />
-            </IconButton>
+            <ComposerTools
+              webSearch={webSearch}
+              onToggleWebSearch={() => setWebSearch((current) => !current)}
+            />
        
           <div className="flex shrink-0 items-center gap-1">
          <button

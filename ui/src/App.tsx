@@ -169,39 +169,24 @@ function AppShell() {
      START CHAT
      ============================================================ */
 
-  async function handleStartChat(content: string) {
-    /*
-     * Logged-out visitors can see the full Melo UI,
-     * but authentication is required before sending.
-     */
-
-    if (!isAuthenticated) {
-      setShowAuthPrompt(true);
-      return;
-    }
-
-    /*
-     * If we're on the landing page, create a brand-new
-     * conversation and give it its own URL.
-     */
-
-    if (!conversationId) {
-      const newConversationId = await createNewConversation();
-
-      navigate(`/chat/${newConversationId}`);
-
-      await sendMessage(content);
-
-      return;
-    }
-
-    /*
-     * We're already inside a conversation.
-     */
-
-    await sendMessage(content);
+  async function handleStartChat(
+  content: string,
+  options?: { webSearch?: boolean }
+) {
+  if (!isAuthenticated) {
+    setShowAuthPrompt(true);
+    return;
   }
 
+  if (!conversationId) {
+    const newConversationId = await createNewConversation();
+    navigate(`/chat/${newConversationId}`);
+    await sendMessage(content, options);
+    return;
+  }
+
+  await sendMessage(content, options);
+}
 
   /* ============================================================
      NEW CHAT
@@ -323,10 +308,6 @@ function AppShell() {
            <FiMenu className="h-5 w-5" />
          </button>
        )}
-
-      {/* ======================================================
-          MOBILE SIDEBAR BUTTON
-          ====================================================== */}
 
       {/* ======================================================
           MAIN CONTENT

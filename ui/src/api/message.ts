@@ -22,6 +22,7 @@ export async function streamMessage(
   onChunk: (chunk: string) => void,
   onComplete: (messageId: string) => void,
   signal?: AbortSignal,
+  webSearch = false,
 ): Promise<void> {
   const accessToken = getAccessToken();
 
@@ -35,9 +36,7 @@ export async function streamMessage(
           ? { Authorization: `Bearer ${accessToken}` }
           : {}),
       },
-      body: JSON.stringify({
-        content,
-      }),
+        body: JSON.stringify({ content, web_search: webSearch }),
       signal,
     }
   );

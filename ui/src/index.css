@@ -1,18 +1,29 @@
 @import "tailwindcss";
 
+html {
+  background: #171615;
+}
 
 body {
   font-family: 'Geist Sans', sans-serif;
+  background: #171615;
 }
+
 code {
   font-family: 'Geist Mono', monospace;
 }
+
 html, body, #root {
   height: 100%;
   overflow: hidden;
   overscroll-behavior: none;
   background: #171615;
   padding-bottom: env(safe-area-inset-bottom);
-  
+}
+
+html.dark,
+html.dark body {
+  background: #171615;
+  color: #f5f5f5;
 }
 

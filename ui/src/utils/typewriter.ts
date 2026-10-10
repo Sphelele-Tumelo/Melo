@@ -7,8 +7,8 @@ export function createTypewriter(onUpdate: (revealedText: string) => void) {
   let isFinished = false;
   let isStopped = false;
 
-  const CHARS_PER_TICK = 8;   // was 3 — reveal bigger chunks per tick
-  const TICK_MS = 8;          // was 12 — fire more often
+  const CHARS_PER_TICK = 8;
+  const TICK_MS = 8;
 
   function tick() {
     if (isStopped) return;
@@ -24,11 +24,19 @@ export function createTypewriter(onUpdate: (revealedText: string) => void) {
 
     onUpdate(revealed);
 
+    if (buffer.length === 0) {
+      isRunning = false;
+      if (!isFinished) {
+        return;
+      }
+      return;
+    }
+
     setTimeout(tick, TICK_MS);
   }
 
   function push(chunk: string) {
-    if (isStopped) return;
+    if (isStopped || isFinished) return;
     buffer += chunk;
     if (!isRunning) {
       isRunning = true;
@@ -38,15 +46,27 @@ export function createTypewriter(onUpdate: (revealedText: string) => void) {
 
   function finish() {
     isFinished = true;
+
+    if (isStopped || buffer.length === 0) {
+      return;
+    }
+
+    if (!isRunning) {
+      isRunning = true;
+      tick();
+    }
   }
 
   function stop() {
     isStopped = true;
+    isRunning = false;
     buffer = "";
+    revealed = "";
+    isFinished = false;
   }
 
   function isDone() {
-    return isFinished && buffer.length === 0;
+    return isFinished && buffer.length === 0 && !isRunning;
   }
 
   return { push, finish, stop, isDone };
