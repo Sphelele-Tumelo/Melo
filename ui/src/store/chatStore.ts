@@ -23,7 +23,6 @@ interface ChatState {
   togglePin: (conversationId: string) => Promise<void>;
   loadConversations: () => Promise<void>;
   loadMessages: (conversationId: string) => Promise<void>;
-  sendMessage: (content: string) => Promise<void>;
   stopGeneration: () => void;
   restartConversation: () => Promise<void>;
   clearError: () => void;
@@ -112,7 +111,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  sendMessage: async (content) => {
+  sendMessage: async (content, options) => {
     const conversationId = get().activeConversationId;
     if (!conversationId) {
       set({ error: "No active conversation." });
@@ -192,7 +191,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
         currentAbortController: null,
         error: wasAborted ? null : "Failed to send message.",
         messages: state.messages.map((msg) =>
-          msg.id === tempAssistantId ? { ...msg, stopped: wasAborted } : msg
+          msg.id === tempAssistantId
+            ? {
+                ...msg,
+                content: wasAborted
+                  ? ""
+                  : "Sorry, I couldn't finish that response. Please try again.",
+                stopped: wasAborted,
+              }
+            : msg
         ),
       }));
     }

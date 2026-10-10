@@ -53,39 +53,64 @@ export async function streamMessage(
   const decoder = new TextDecoder();
 
   let buffer = "";
+  let receivedCompletion = false;
+
+  function processEvent(event: string) {
+    const data = event
+      .split(/\r?\n/)
+      .filter((line) => line.startsWith("data:"))
+      .map((line) => line.slice(5).trimStart())
+      .join("\n");
+
+    if (!data) {
+      return;
+    }
+
+    const payload = JSON.parse(data);
+
+    if (payload.error) {
+      throw new Error(payload.error);
+    }
+
+    if (typeof payload.content === "string") {
+      onChunk(payload.content);
+    }
+
+    if (payload.done && !receivedCompletion) {
+      if (typeof payload.message_id !== "string") {
+        throw new Error("Streaming response completed without a message ID.");
+      }
+
+      receivedCompletion = true;
+      onComplete(payload.message_id);
+    }
+  }
 
   while (true) {
     const { value, done } = await reader.read();
 
     if (done) {
+      buffer += decoder.decode();
       break;
     }
 
     buffer += decoder.decode(value, { stream: true });
 
-    const events = buffer.split("\n\n");
+    const events = buffer.split(/\r?\n\r?\n/);
 
     buffer = events.pop() ?? "";
 
     for (const event of events) {
-      if (!event.startsWith("data: ")) {
-        continue;
-      }
-
-      const payload = JSON.parse(event.slice(6));
-
-      if (payload.error) {
-        throw new Error(payload.error);
-      }
-
-      if (payload.content) {
-        onChunk(payload.content);
-      }
-
-      if (payload.done) {
-        onComplete(payload.message_id);
-      }
+      processEvent(event);
     }
+  }
+
+  if (buffer.trim()) {
+    processEvent(buffer);
+  }
+
+  if (!receivedCompletion) {
+    throw new Error("Streaming response ended before Melo finished replying.");
   }
 }
 
