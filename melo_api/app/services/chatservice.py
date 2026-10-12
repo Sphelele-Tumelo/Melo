@@ -190,7 +190,7 @@ async def _prepare_turn(
     conversation_id: UUID,
     user_id: UUID,
     message_data: MessageCreate,
-) -> list[dict]:
+) -> tuple[list[dict], list[dict]]:
     """
     Shared setup for both streaming and non-streaming turns:
     - Verifies conversation ownership
@@ -298,13 +298,15 @@ async def _prepare_turn(
         for message in messages
     ]
 
-    return [
+    messages_for_model = [
         {
             "role": "system",
             "content": MELO_SYSTEM_PROMPT + memory_context + web_context,
         },
         *conversation_messages,
     ]
+
+    return messages_for_model, web_sources
 
 
 async def create_message(
@@ -314,7 +316,7 @@ async def create_message(
     message_data: MessageCreate,
 ) -> dict:
 
-    messages_for_model = await _prepare_turn(db, conversation_id, user_id, message_data)
+    messages_for_model, web_sources = await _prepare_turn(db, conversation_id, user_id, message_data)
 
     response = await orchestrate_chat(
         conversation_id=conversation_id,
@@ -341,6 +343,7 @@ async def create_message(
         "message_id": assistant_message.id,
         "content": assistant_message.content,
         "model": response["model"],
+        "sources": web_sources
     }
 
 
@@ -363,6 +366,8 @@ async def create_message_stream(
     print(f"message length: {len(message_data.content)}", flush=True)
     print(f"model: {model}", flush=True)
 
+    assistant_message = None
+
     # ---------------------------------------------------------
     # 1. PREPARE TURN
     # ---------------------------------------------------------
@@ -370,7 +375,7 @@ async def create_message_stream(
     try:
         print("🧠 STARTING _prepare_turn()", flush=True)
     
-        messages_for_model = await _prepare_turn(
+        messages_for_model, web_sources = await _prepare_turn(
             db,
             conversation_id,
             user_id,
@@ -378,7 +383,7 @@ async def create_message_stream(
         )
     
         print(
-            "✅ _prepare_turn() COMPLETE",
+            f"_prepare_turn() COMPLETE - {len(web_sources)} sources",
             flush=True,
         )
     
@@ -406,7 +411,7 @@ async def create_message_stream(
         import traceback
         traceback.print_exc()
      
-        yield f"data: {json.dumps({'error': str(e)})}\n\n"
+        yield f"data: {json.dumps({'error': str(e), 'message_id': str(assistant_message.id), 'sources': web_sources, 'done': True})}\n\n"
         return
 
     # ---------------------------------------------------------
