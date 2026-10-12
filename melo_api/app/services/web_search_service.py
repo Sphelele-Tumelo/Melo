@@ -10,15 +10,42 @@ TOOLS_URL = os.getenv(
     "http://localhost:8000",
 )
 
-SEARCH_TRIGGERS = re.compile(
+CURRENT_INFORMATION_REQUEST = re.compile(
     r"\b(latest|breaking|news|price of|stock price|exchange rate|"
-    r"weather (in|for)|who won|score of|release date|what happened)\b",
+    r"weather (in|for)|who won|score(?:s)?(?: of| for| details)?|"
+    r"results?|standings|release date|what happened|today|yesterday|"
+    r"this week|this month|currently|recent(?:ly)?)\b",
+    re.IGNORECASE,
+)
+
+EXPLICIT_LOOKUP_REQUEST = re.compile(
+    r"\b(search(?:\s+up)?|look\s+up|google|"
+    r"find\s+(?:out|information|details|the\s+latest)|"
+    r"tell\s+me\s+about|what\s+do\s+you\s+know\s+about|"
+    r"information\s+(?:about|on)|details\s+(?:about|on))\b",
+    re.IGNORECASE,
+)
+
+FACTUAL_QUESTION = re.compile(
+    r"\b(?:who|what|where|when|which|whose)\s+"
+    r"(?:is|are|was|were|did|does|do|has|have|can|could|will|"
+    r"would|won|happened|makes|made|founded|built|created|"
+    r"owns|runs|plays|scored|costs|cost|lives|works)\b|"
+    r"\bhow\s+(?:many|much|old|long|far|often|recently)\b",
     re.IGNORECASE,
 )
 
 
 def needs_web_search(message: str) -> bool:
-    return bool(SEARCH_TRIGGERS.search(message))
+    """Search for explicit lookups, current facts, and factual questions."""
+    return any(
+        trigger.search(message)
+        for trigger in (
+            CURRENT_INFORMATION_REQUEST,
+            EXPLICIT_LOOKUP_REQUEST,
+            FACTUAL_QUESTION,
+        )
+    )
 
 
 def _is_valid_source_url(url: object) -> bool:
