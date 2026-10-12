@@ -130,6 +130,7 @@ function AppShell() {
     messages,
     activeConversationId,
     isThinking,
+    activity,
     isLoadingMessages,
     createNewConversation,
     loadConversations,
@@ -341,6 +342,7 @@ function AppShell() {
           }
           onSend={sendMessage}
           onStop={stopGeneration}
+          activity={activity}
           onRestart={restartConversation}
         />
       )}

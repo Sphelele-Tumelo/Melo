@@ -392,7 +392,7 @@ export default function Chats({
                              className="rounded-lg border px-3 py-2 text-sm hover:opacity-80"
                            >
                              [{source.id}] {source.title}
-                             <span aria-hidden="true"> ↗</span>
+                             <span aria-hidden="true">↗</span>
                            </a>
                          ))}
                        </div>

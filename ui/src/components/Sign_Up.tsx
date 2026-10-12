@@ -565,7 +565,7 @@ export default function SignUp() {
   const [mobileAuthOpen, setMobileAuthOpen] = useState(false);
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#FCFBF8] text-[#181716]">
+    <main className="min-h-screen overflow-x-hidden bg-[#FCFBF8] text-[#181716] lg:overflow-hidden">
       <div className="hidden min-h-screen lg:flex">
         <DesktopAside />
 

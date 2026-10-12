@@ -8,7 +8,6 @@ import { createTypewriter } from "../utils/typewriter";
 import type {
   Message,
   MeloActivity,
-  WebSource,
 } from "../api/message";
 
 interface ChatState {
@@ -145,12 +144,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     const abortController = new AbortController();
 
-    set({
+    set((state) => ({
       isThinking: true,
       activity: "preparing_answer",
       error: null,
       currentAbortController: abortController,
-    });
+      messages: [...state.messages, userMsg, assistantMsg],
+    }));
 
     const typewriter = createTypewriter((revealedText) => {
       set((state) => ({
