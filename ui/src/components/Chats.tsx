@@ -15,7 +15,7 @@ import {
   FiThumbsUp,
   FiVolume2,
 } from "react-icons/fi";
-import type { Message } from "../api/message";
+import type { MeloActivity, Message } from "../api/message";
 
 import MarkdownMessage from "./MarkdownMessage";
 import ComposerTools from "./ComposerTools";
@@ -24,8 +24,10 @@ type ChatsProps = {
   messages: Message[];
   isThinking: boolean;
   conversationTitle: string;
-  onSend: (content: string, options?: { webSearch?: boolean }) => void;
-  onStop: () => void;   // new
+  onSend: (content: string, options?: 
+    { webSearch?: boolean }) => void;
+  onStop: () => void;   
+  activity: MeloActivity;
   onRestart: () => void;
 };
 
@@ -57,6 +59,7 @@ export default function Chats({
   conversationTitle,
   onSend,
   onStop, 
+  activity,
   onRestart,
 }: ChatsProps) {
   const [draft, setDraft] = useState("");
@@ -134,25 +137,38 @@ export default function Chats({
   useEffect(() => {
     if (!isThinking) return;
 
-    const thinkingLabels = [
-      "Thinking",
-      "Contemplating",
-      "Connecting the dots",
-      "Putting it together",
-      "Working through it",
-      "Crunching the details",
-      "Checking the logic",
-      "Connecting a few neurons",
-      "Cooking something up",
-      "Almost there",
-      "One second...",
-      "Let me think about that",
-      "Making sense of it",
-      "Running the mental gymnastics",
-      "Consulting the imaginary whiteboard",
-    ];
+    const activityLabels: Record<MeloActivity, string[]> = {
+      searching_web: ["Searching the web..."],
+      searching_memories: ["Remembering..."],
+      reading_sources: ["Reading sources..."],
+      preparing_answer: ["Preparing answer..."],
+      idle: [
+        "Thinking...",
+        "Noodling",
+        "Mulling over",
+        "Pondering",
+        "Ruminating",
+        "Cogitating",
+        "Contemplating",
+        "Speculating",
+        "Deliberating",
+        "Reflecting",
+        "Meditating",
+        "Brooding",
+        "Analyzing",
+        "Evaluating",
+        "Judging",
+        "Scrutinizing",
+        "Examining",
+        "Investigating",
+      ],
+    };
+
+    const thinkingLabels = activityLabels[activity] ?? activityLabels.idle;
 
     let labelIndex = 0;
+
+    setThinkingLabel(thinkingLabels[0]);
 
     const interval = window.setInterval(() => {
       labelIndex = (labelIndex + 1) % thinkingLabels.length;
@@ -160,7 +176,7 @@ export default function Chats({
     }, 1500);
 
     return () => window.clearInterval(interval);
-  }, [isThinking]);
+  }, [activity, isThinking]);
 
   async function copyMessage(message: Message) {
     await navigator.clipboard?.writeText(message.content);
@@ -361,6 +377,26 @@ export default function Chats({
                           message.content
                         )}
                       </div>
+
+
+                    {message.role === "assistant" &&
+                     message.sources &&
+                     message.sources.length > 0 && (
+                       <div className="mt-3 flex flex-wrap gap-2">
+                         {message.sources.map((source) => (
+                           <a
+                             key={`${source.id}-${source.url}`}
+                             href={source.url}
+                             target="_blank"
+                             rel="noopener noreferrer"
+                             className="rounded-lg border px-3 py-2 text-sm hover:opacity-80"
+                           >
+                             [{source.id}] {source.title}
+                             <span aria-hidden="true"> ↗</span>
+                           </a>
+                         ))}
+                       </div>
+                     )}
                       
 
                       {/* ACTIONS */}

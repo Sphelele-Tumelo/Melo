@@ -1,20 +1,20 @@
+import asyncio
 import json
-import re
-from typing import AsyncGenerator
-from uuid import UUID
-
 import math
+import re
+from collections.abc import AsyncGenerator, Awaitable, Callable
+from uuid import UUID
 
 from app.core.enum import MeloModel
 from app.core.prompts import MELO_SYSTEM_PROMPT
 from app.data.chroma import ChromaDatabase
 from app.models.chat import Chat, MessageRole
 from app.models.conversation import Conversation
-from app.services.web_search_service import fetch_web_context, needs_web_search
 from app.services.embeddings_service import EmbeddingService
 from app.services.memory_service import create_memory
 from app.services.model_router import get_model_provider
 from app.services.orchestrator_service import orchestrate_chat
+from app.services.web_search_service import fetch_web_context, needs_web_search
 from schemas.chat import ChatRequest, MessageCreate
 from schemas.memory import MemoryCreate
 from sqlalchemy import select
@@ -190,6 +190,7 @@ async def _prepare_turn(
     conversation_id: UUID,
     user_id: UUID,
     message_data: MessageCreate,
+    activity_callback: Callable[[str], Awaitable[None]] | None = None,
 ) -> tuple[list[dict], list[dict]]:
     """
     Shared setup for both streaming and non-streaming turns:
@@ -235,6 +236,9 @@ async def _prepare_turn(
             ),
         )
 
+    if activity_callback:
+        await activity_callback("searching memories")
+
     query_embedding = embedding_service.generate_embedding(message_data.content)
     memory_results = chroma.search_memories(
         embedding=query_embedding,
@@ -269,11 +273,20 @@ async def _prepare_turn(
     web_sources = []
 
     if use_web_search:
+
+        if activity_callback:
+            await activity_callback("searching web")
+
+
         print("🌐 WEB SEARCH TRIGGERED", flush=True)
 
         web_context, web_sources = await fetch_web_context(
             message_data.content
         )
+
+        if web_sources and activity_callback:
+            await activity_callback("reading_sources"
+                                    )
 
         print(
             f"🌐 web context chars: {len(web_context)} | "
@@ -353,6 +366,7 @@ async def create_message_stream(
     user_id: UUID,
     message_data: MessageCreate,
     model: MeloModel = MeloModel.SWIFT,
+    activity_queue: asyncio.Queue[str] = asyncio.Queue(),
 ) -> AsyncGenerator[str, None]:
     """
     Debug version of the streaming pipeline.
@@ -368,51 +382,60 @@ async def create_message_stream(
 
     assistant_message = None
 
+    async def report_activity(activity: str) -> None:
+        await activity_queue.put(activity)
+
     # ---------------------------------------------------------
     # 1. PREPARE TURN
     # ---------------------------------------------------------
 
     try:
         print("🧠 STARTING _prepare_turn()", flush=True)
-    
-        messages_for_model, web_sources = await _prepare_turn(
-            db,
-            conversation_id,
-            user_id,
-            message_data,
-        )
-    
-        print(
-            f"_prepare_turn() COMPLETE - {len(web_sources)} sources",
-            flush=True,
-        )
-    
-        print(
-            f"messages prepared before context limit: "
-            f"{len(messages_for_model)}",
-            flush=True,
-        )
-    
-        messages_for_model = _limit_model_context(
-            messages_for_model
+
+        prepare_task = asyncio.create_task(
+            _prepare_turn(
+                db,
+                conversation_id,
+                user_id,
+                message_data,
+                activity_callback=report_activity,
+            )
         )
 
+        while not prepare_task.done():
+            try:
+                activity = await asyncio.wait_for(
+                    activity_queue.get(),
+                    timeout=0.1,
+                )
+                yield f"data: {json.dumps({'activity': activity})}\n\n"
+            except asyncio.TimeoutError:
+                continue
+
+        while not activity_queue.empty():
+            activity = activity_queue.get_nowait()
+            yield f"data: {json.dumps({'activity': activity})}\n\n"
+
+        messages_for_model, web_sources = await prepare_task
+
+        print(
+            f"_prepare_turn() COMPLETE - {len(web_sources)} sources",
+            flush=True
+        )
+        yield f"data: {json.dumps({'sources': web_sources})}\n\n"
+        yield f"data: {json.dumps({'activity': 'preparing_answer'})}\n\n"
+
+        messages_for_model = _limit_model_context(messages_for_model)
+
     except Exception as e:
-        print("💥 _prepare_turn() FAILED", flush=True)
-        print(
-            f"error type: {type(e).__name__}",
-            flush=True,
-        )
-        print(
-            f"error: {repr(e)}",
-            flush=True,
-        )
-    
+        print("_prepare_turn() FAILED", flush=True)
+        print(f"error type: {type(e).__name__}", flush=True)
+        print(f"error: {repr(e)}", flush=True)
+
         import traceback
         traceback.print_exc()
-     
-        yield f"data: {json.dumps({'error': str(e), 'message_id': str(assistant_message.id), 'sources': web_sources, 'done': True})}\n\n"
-        return
+
+        yield f"data: {json.dumps({'error': 'Melo could not prepare this response. Please try again.', 'done': True})}\n\n"
 
     # ---------------------------------------------------------
     # 2. GET MODEL PROVIDER
@@ -458,7 +481,11 @@ async def create_message_stream(
                 "content": delta
             })
 
-            yield f"data: {payload}\n\n"
+        yield f"data: {json.dumps({
+                "done": True,
+                "message_id": str(assistant_message.id),
+                "sources": web_sources,
+        })}\n\n"
 
         print("✅ MODEL STREAM COMPLETE", flush=True)
         print(
@@ -521,8 +548,10 @@ async def create_message_stream(
     print("🏁 STREAM FINISHED SUCCESSFULLY", flush=True)
 
     yield f"data: {json.dumps({
-        'done': True,
-        'message_id': str(assistant_message.id),
+        "done": True,
+        "message_id": str(assistant_message.id),
+        "sources": web_sources,
+        "activity": 'idle',
     })}\n\n"
 
 async def get_messages(

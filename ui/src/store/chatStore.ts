@@ -4,8 +4,12 @@ import { getMessages, streamMessage } from "../api/message";
 import { deleteConversation as deleteConversationApi } from "../api/conversation.ts";
 import type { Conversation } from "../api/conversation";
 import { updateConversation } from "../api/conversation.ts";
-import type { Message } from "../api/message";
 import { createTypewriter } from "../utils/typewriter";
+import type {
+  Message,
+  MeloActivity,
+  WebSource,
+} from "../api/message";
 
 interface ChatState {
   conversations: Conversation[];
@@ -13,6 +17,7 @@ interface ChatState {
   activeConversationId: string | null;
   isLoadingConversations: boolean;
   isLoadingMessages: boolean;
+  activity: MeloActivity;
   isThinking: boolean;
   error: string | null;
   currentAbortController: AbortController | null;
@@ -36,6 +41,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   isLoadingMessages: false,
   isThinking: false,
   error: null,
+  activity: "idle",
   currentAbortController: null,
 
   createNewConversation: async () => {
@@ -139,12 +145,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     const abortController = new AbortController();
 
-    set((state) => ({
-      messages: [...state.messages, userMsg, assistantMsg],
+    set({
       isThinking: true,
+      activity: "preparing_answer",
       error: null,
       currentAbortController: abortController,
-    }));
+    });
 
     const typewriter = createTypewriter((revealedText) => {
       set((state) => ({
@@ -170,6 +176,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
               clearInterval(checkDone);
               set((state) => ({
                 isThinking: false,
+                activity: "idle",
                 currentAbortController: null,
                 messages: state.messages.map((msg) =>
                   msg.id === tempAssistantId ? { ...msg, id: finalMessageId } : msg
@@ -180,6 +187,19 @@ export const useChatStore = create<ChatState>((set, get) => ({
         },
         abortController.signal,
         options?.webSearch ?? false,
+
+        (activity) => {
+          set({ activity });
+        },
+        (sources) => {
+          set((state) => ({
+            messages: state.messages.map((msg) =>
+              msg.id === tempAssistantId
+                ? { ...msg, sources }
+                : msg
+            ),
+          }));
+        },
       );
     } catch (err) {
       typewriter.stop();
@@ -188,6 +208,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
       set((state) => ({
         isThinking: false,
+        activity: "idle",
         currentAbortController: null,
         error: wasAborted ? null : "Failed to send message.",
         messages: state.messages.map((msg) =>
@@ -213,7 +234,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   restartConversation: async () => {
-    set({ messages: [], isThinking: false, error: null });
+    set({ messages: [],
+      activity: "idle", isThinking: false, error: null });
   },
 
   clearError: () => set({ error: null }),
