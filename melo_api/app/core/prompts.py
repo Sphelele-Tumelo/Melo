@@ -196,6 +196,10 @@ MELO_SYSTEM_PROMPT = dedent(
     If long-term memories are provided by the application, use them
     appropriately.
 
+    When relevant past-conversation context is provided, use it before
+    saying you do not remember. Be clear about what the context confirms
+    versus what you are inferring.
+
     If information is unavailable, say so.
 
     =========================

@@ -17,7 +17,7 @@ from app.services.orchestrator_service import orchestrate_chat
 from app.services.web_search_service import fetch_web_context, needs_web_search
 from schemas.chat import ChatRequest, MessageCreate
 from schemas.memory import MemoryCreate
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 chroma = ChromaDatabase()
@@ -27,6 +27,21 @@ REMEMBER_TRIGGER_PATTERN = re.compile(
     r"\b(remember (that|this)|don'?t forget (that|this)|keep in mind (that)?)\b",
     re.IGNORECASE,
 )
+RECALL_REQUEST_PATTERN = re.compile(
+    r"\b(remember(?:s|ed|ing)?|recall|talk(?:ed|ing)? about|discuss(?:ed|ing)?|"
+    r"mentioned|told me|what did we)\b",
+    re.IGNORECASE,
+)
+RECALL_STOP_WORDS = {
+    "about", "again", "did", "discuss", "discussed", "do", "from",
+    "have", "last", "mention", "mentioned", "remember", "recall",
+    "that", "the", "then", "there", "this", "time", "talk", "talked",
+    "talking", "told", "what", "when", "where", "which", "who", "with",
+    "you", "your", "we", "were", "was", "me", "something", "anything",
+    "he", "his", "it", "is", "if", "why", "does", "forget", "forgets",
+    "quick", "cant", "can", "search", "memories", "memory", "user", "ask",
+    "asks",
+}
 
 
 
@@ -185,6 +200,44 @@ def _extract_memory_content(raw_message: str) -> str:
     return cleaned.lstrip(",:").strip() or raw_message
 
 
+async def _search_conversation_history(
+    db: AsyncSession,
+    user_id: UUID,
+    query: str,
+    current_message_id: UUID,
+) -> list[str]:
+    if not RECALL_REQUEST_PATTERN.search(query):
+        return []
+
+    terms = list(dict.fromkeys(
+        word.lower()
+        for word in re.findall(r"[A-Za-z0-9][A-Za-z0-9'-]{2,}", query)
+        if word.lower() not in RECALL_STOP_WORDS
+    ))[-6:]
+    statement = (
+        select(Chat, Conversation.title)
+        .join(Conversation, Chat.conversation_id == Conversation.id)
+        .where(
+            Conversation.user_id == user_id,
+            Chat.role.in_([MessageRole.USER, MessageRole.ASSISTANT]),
+            Chat.id != current_message_id,
+        )
+        .order_by(Chat.created_at.desc())
+        .limit(5)
+    )
+    if terms:
+        statement = statement.where(
+            or_(*(Chat.content.ilike(f"%{term}%") for term in terms))
+        )
+
+    result = await db.execute(statement)
+
+    return [
+        f'- In "{title}", {message.role.value} said: {message.content}'
+        for message, title in result.all()
+    ]
+
+
 async def _prepare_turn(
     db: AsyncSession,
     conversation_id: UUID,
@@ -197,7 +250,7 @@ async def _prepare_turn(
     - Verifies conversation ownership
     - Saves the user's message
     - Runs the manual remember-trigger
-    - Retrieves relevant memories
+    - Retrieves relevant memories and past-chat context
     - Builds the final messages_for_model list
 
     Returns messages_for_model so the caller can either stream or
@@ -247,6 +300,12 @@ async def _prepare_turn(
     )
 
     retrieved_memories = memory_results.get("documents", [[]])[0] if memory_results else []
+    recalled_messages = await _search_conversation_history(
+        db=db,
+        user_id=user_id,
+        query=message_data.content,
+        current_message_id=user_message.id,
+    )
 
     memory_context = ""
 
@@ -263,6 +322,17 @@ async def _prepare_turn(
                 f"- {mem}"
                 for mem in retrieved_memories
             )
+        )
+
+    if recalled_messages:
+        memory_context += (
+            "\n\n"
+            "=========================\n"
+            "RELEVANT PAST CONVERSATION\n"
+            "=========================\n"
+            "These are matching messages from this user's earlier chats. "
+            "Use them when relevant, and be clear if they do not answer the question.\n\n"
+            + "\n".join(recalled_messages)
         )
 
     use_web_search = message_data.web_search or needs_web_search(
@@ -366,7 +436,7 @@ async def create_message_stream(
     user_id: UUID,
     message_data: MessageCreate,
     model: MeloModel = MeloModel.SWIFT,
-    activity_queue: asyncio.Queue[str] = asyncio.Queue(),
+    activity_queue: asyncio.Queue[str] | None = None,
 ) -> AsyncGenerator[str, None]:
     """
     Debug version of the streaming pipeline.
@@ -379,6 +449,9 @@ async def create_message_stream(
     print(f"user_id: {user_id}", flush=True)
     print(f"message length: {len(message_data.content)}", flush=True)
     print(f"model: {model}", flush=True)
+
+    if activity_queue is None:
+        activity_queue = asyncio.Queue()
 
     assistant_message = None
 
@@ -436,6 +509,7 @@ async def create_message_stream(
         traceback.print_exc()
 
         yield f"data: {json.dumps({'error': 'Melo could not prepare this response. Please try again.', 'done': True})}\n\n"
+        return
 
     # ---------------------------------------------------------
     # 2. GET MODEL PROVIDER
@@ -477,15 +551,7 @@ async def create_message_stream(
 
             accumulated_text += delta
 
-            payload = json.dumps({
-                "content": delta
-            })
-
-        yield f"data: {json.dumps({
-                "done": True,
-                "message_id": str(assistant_message.id),
-                "sources": web_sources,
-        })}\n\n"
+            yield f"data: {json.dumps({'content': delta})}\n\n"
 
         print("✅ MODEL STREAM COMPLETE", flush=True)
         print(
