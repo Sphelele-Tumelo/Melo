@@ -1,10 +1,15 @@
 import asyncio
 import json
+import logging
 import math
 import re
+import time
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from uuid import UUID
 
+from groq import RateLimitError
+
+from app.core.config import settings
 from app.core.enum import MeloModel
 from app.core.prompts import MELO_SYSTEM_PROMPT
 from app.data.chroma import ChromaDatabase
@@ -22,6 +27,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 chroma = ChromaDatabase()
 embedding_service = EmbeddingService()
+logger = logging.getLogger(__name__)
+FIRST_TOKEN_TIMEOUT_SECONDS = 20
+TOTAL_STREAM_TIMEOUT_SECONDS = 60
+RATE_LIMIT_RETRY_BACKOFF_SECONDS = 0.5
 
 REMEMBER_TRIGGER_PATTERN = re.compile(
     r"\b(remember (that|this)|don'?t forget (that|this)|keep in mind (that)?)\b",
@@ -50,15 +59,6 @@ RECALL_STOP_WORDS = {
 # ============================================================
 # MELO CONTEXT MANAGEMENT
 # ============================================================
-
-# Your current Groq organization has an 8K TPM limit.
-# We intentionally stay below it to leave room for estimation
-# differences and normal API overhead.
-MODEL_INPUT_TOKEN_BUDGET = 4500
-
-# Keep generated responses bounded so one request doesn't
-# consume the entire TPM allowance.
-MODEL_MAX_COMPLETION_TOKENS = 1200
 
 
 def _estimate_tokens(text: str) -> int:
@@ -136,7 +136,7 @@ def _limit_model_context(messages: list[dict[str, str]]) -> list[dict[str, str]]
 
     remaining_budget = max(
         0,
-        MODEL_INPUT_TOKEN_BUDGET - system_tokens
+        settings.model_input_token_budget - system_tokens
     )
 
     # --------------------------------------------------------
@@ -179,19 +179,6 @@ def _limit_model_context(messages: list[dict[str, str]]) -> list[dict[str, str]]
         *system_messages,
         *selected_messages,
     ]
-
-    estimated_total = sum(
-        _estimate_message_tokens(message)
-        for message in final_messages
-    )
-
-    print(
-        "🧠 CONTEXT MANAGER:",
-        f"{len(messages)} messages -> "
-        f"{len(final_messages)} messages | "
-        f"estimated tokens: {estimated_total}",
-        flush=True,
-    )
 
     return final_messages
 
@@ -290,7 +277,7 @@ async def _prepare_turn(
         )
 
     if activity_callback:
-        await activity_callback("searching memories")
+        await activity_callback("searching_memories")
 
     query_embedding = embedding_service.generate_embedding(message_data.content)
     memory_results = chroma.search_memories(
@@ -345,24 +332,14 @@ async def _prepare_turn(
     if use_web_search:
 
         if activity_callback:
-            await activity_callback("searching web")
-
-
-        print("🌐 WEB SEARCH TRIGGERED", flush=True)
+            await activity_callback("searching_web")
 
         web_context, web_sources = await fetch_web_context(
             message_data.content
         )
 
         if web_sources and activity_callback:
-            await activity_callback("reading_sources"
-                                    )
-
-        print(
-            f"🌐 web context chars: {len(web_context)} | "
-            f"sources: {len(web_sources)}",
-            flush=True,
-        )
+            await activity_callback("reading_sources")
 
     # This must be OUTSIDE the if — we always need conversation history
     result = await db.execute(
@@ -438,33 +415,32 @@ async def create_message_stream(
     model: MeloModel = MeloModel.SWIFT,
     activity_queue: asyncio.Queue[str] | None = None,
 ) -> AsyncGenerator[str, None]:
-    """
-    Debug version of the streaming pipeline.
-
-    Logs each major stage so we can identify where the request gets stuck.
-    """
-
-    print("🔥 STREAM START", flush=True)
-    print(f"conversation_id: {conversation_id}", flush=True)
-    print(f"user_id: {user_id}", flush=True)
-    print(f"message length: {len(message_data.content)}", flush=True)
-    print(f"model: {model}", flush=True)
+    logger.info("Chat stream started conversation_id=%s", conversation_id)
 
     if activity_queue is None:
         activity_queue = asyncio.Queue()
 
-    assistant_message = None
-
     async def report_activity(activity: str) -> None:
         await activity_queue.put(activity)
+
+    def error_event(code: str, message: str) -> str:
+        return (
+            "event: error\n"
+            f"data: {json.dumps({'code': code, 'message': message})}\n\n"
+        )
+
+    def terminal_event(payload: dict | None = None) -> str:
+        return (
+            "event: done\n"
+            f"data: {json.dumps({'done': True, **(payload or {})})}\n\n"
+        )
 
     # ---------------------------------------------------------
     # 1. PREPARE TURN
     # ---------------------------------------------------------
 
     try:
-        print("🧠 STARTING _prepare_turn()", flush=True)
-
+        logger.info("Preparing chat turn conversation_id=%s", conversation_id)
         prepare_task = asyncio.create_task(
             _prepare_turn(
                 db,
@@ -490,25 +466,15 @@ async def create_message_stream(
             yield f"data: {json.dumps({'activity': activity})}\n\n"
 
         messages_for_model, web_sources = await prepare_task
-
-        print(
-            f"_prepare_turn() COMPLETE - {len(web_sources)} sources",
-            flush=True
-        )
         yield f"data: {json.dumps({'sources': web_sources})}\n\n"
         yield f"data: {json.dumps({'activity': 'preparing_answer'})}\n\n"
 
         messages_for_model = _limit_model_context(messages_for_model)
 
-    except Exception as e:
-        print("_prepare_turn() FAILED", flush=True)
-        print(f"error type: {type(e).__name__}", flush=True)
-        print(f"error: {repr(e)}", flush=True)
-
-        import traceback
-        traceback.print_exc()
-
-        yield f"data: {json.dumps({'error': 'Melo could not prepare this response. Please try again.', 'done': True})}\n\n"
+    except Exception:
+        logger.exception("Chat preparation failed conversation_id=%s", conversation_id)
+        yield error_event("internal", "Melo couldn't prepare that response. Please try again.")
+        yield terminal_event()
         return
 
     # ---------------------------------------------------------
@@ -516,24 +482,11 @@ async def create_message_stream(
     # ---------------------------------------------------------
 
     try:
-        print("🤖 GETTING MODEL PROVIDER", flush=True)
-
         provider = get_model_provider(model)
-
-        print(
-            f"✅ PROVIDER CREATED: {provider.__class__.__name__}",
-            flush=True,
-        )
-
-    except Exception as e:
-        print("💥 PROVIDER CREATION FAILED", flush=True)
-        print(f"error type: {type(e).__name__}", flush=True)
-        print(f"error: {repr(e)}", flush=True)
-
-        import traceback
-        traceback.print_exc()
-
-        yield f"data: {json.dumps({'error': str(e)})}\n\n"
+    except Exception:
+        logger.exception("Provider setup failed conversation_id=%s", conversation_id)
+        yield error_event("internal", "Melo couldn't start that response. Please try again.")
+        yield terminal_event()
         return
 
     # ---------------------------------------------------------
@@ -541,33 +494,72 @@ async def create_message_stream(
     # ---------------------------------------------------------
 
     accumulated_text = ""
+    started_at = time.monotonic()
+    first_token_deadline = started_at + FIRST_TOKEN_TIMEOUT_SECONDS
+    total_deadline = started_at + TOTAL_STREAM_TIMEOUT_SECONDS
+    sent_token = False
+    retried_rate_limit = False
 
     try:
-        print("🚀 STARTING MODEL STREAM", flush=True)
+        logger.info("Starting provider stream conversation_id=%s", conversation_id)
+        while True:
+            stream = provider.stream_chat(messages_for_model).__aiter__()
+            try:
+                while True:
+                    now = time.monotonic()
+                    remaining = total_deadline - now
+                    if remaining <= 0:
+                        raise asyncio.TimeoutError
 
-        async for delta in provider.stream_chat(messages_for_model):
+                    timeout = remaining
+                    if not sent_token:
+                        timeout = min(timeout, first_token_deadline - now)
+                        if timeout <= 0:
+                            raise asyncio.TimeoutError
 
-            print(f"🧩 DELTA RECEIVED: {repr(delta)}", flush=True)
+                    try:
+                        delta = await asyncio.wait_for(
+                            stream.__anext__(),
+                            timeout=timeout,
+                        )
+                    except StopAsyncIteration:
+                        break
 
-            accumulated_text += delta
+                    if not delta:
+                        continue
 
-            yield f"data: {json.dumps({'content': delta})}\n\n"
+                    sent_token = True
+                    accumulated_text += delta
+                    yield f"data: {json.dumps({'content': delta})}\n\n"
 
-        print("✅ MODEL STREAM COMPLETE", flush=True)
-        print(
-            f"assistant response length: {len(accumulated_text)}",
-            flush=True,
-        )
+                break
+            except RateLimitError:
+                if sent_token or retried_rate_limit:
+                    raise
+                retried_rate_limit = True
+                backoff = min(
+                    RATE_LIMIT_RETRY_BACKOFF_SECONDS,
+                    total_deadline - time.monotonic(),
+                )
+                if backoff <= 0:
+                    raise asyncio.TimeoutError
+                await asyncio.sleep(backoff)
 
-    except Exception as e:
-        print("💥 MODEL STREAM FAILED", flush=True)
-        print(f"error type: {type(e).__name__}", flush=True)
-        print(f"error: {repr(e)}", flush=True)
-
-        import traceback
-        traceback.print_exc()
-
-        yield f"data: {json.dumps({'error': str(e)})}\n\n"
+        logger.info("Provider stream completed conversation_id=%s", conversation_id)
+    except asyncio.TimeoutError:
+        logger.exception("Provider stream timed out conversation_id=%s", conversation_id)
+        yield error_event("timeout", "Melo took too long to respond. Please try again.")
+        yield terminal_event()
+        return
+    except RateLimitError:
+        logger.exception("Provider rate limited conversation_id=%s", conversation_id)
+        yield error_event("provider_busy", "Melo is busy right now. Please try again shortly.")
+        yield terminal_event()
+        return
+    except Exception:
+        logger.exception("Provider stream failed conversation_id=%s", conversation_id)
+        yield error_event("internal", "Melo couldn't finish that response. Please try again.")
+        yield terminal_event()
         return
 
     # ---------------------------------------------------------
@@ -575,7 +567,7 @@ async def create_message_stream(
     # ---------------------------------------------------------
 
     try:
-        print("💾 SAVING ASSISTANT MESSAGE", flush=True)
+        logger.info("Saving assistant response conversation_id=%s", conversation_id)
 
         assistant_message = Chat(
             conversation_id=conversation_id,
@@ -588,37 +580,26 @@ async def create_message_stream(
         await db.commit()
         await db.refresh(assistant_message)
 
-        print(
-            f"✅ ASSISTANT MESSAGE SAVED: {assistant_message.id}",
-            flush=True,
-        )
-
-    except Exception as e:
-        print("💥 ASSISTANT MESSAGE SAVE FAILED", flush=True)
-        print(f"error type: {type(e).__name__}", flush=True)
-        print(f"error: {repr(e)}", flush=True)
-
-        import traceback
-        traceback.print_exc()
+    except Exception:
+        logger.exception("Assistant response save failed conversation_id=%s", conversation_id)
 
         # Roll back the session so it isn't left in a failed state.
         await db.rollback()
 
-        yield f"data: {json.dumps({'error': str(e)})}\n\n"
+        yield error_event("internal", "Melo couldn't save that response. Please try again.")
+        yield terminal_event()
         return
 
     # ---------------------------------------------------------
     # 5. DONE
     # ---------------------------------------------------------
 
-    print("🏁 STREAM FINISHED SUCCESSFULLY", flush=True)
-
-    yield f"data: {json.dumps({
-        "done": True,
+    logger.info("Chat stream finished conversation_id=%s", conversation_id)
+    yield terminal_event({
         "message_id": str(assistant_message.id),
         "sources": web_sources,
-        "activity": 'idle',
-    })}\n\n"
+        "activity": "idle",
+    })
 
 async def get_messages(
     db: AsyncSession,

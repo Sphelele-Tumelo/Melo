@@ -1,18 +1,16 @@
-import asyncio
 from collections.abc import AsyncGenerator
 
 from app.core.config import settings
 from app.providers.base_provider import BaseModelProvider
-from groq import Groq
+from groq import AsyncGroq
 
 MODEL_NAME = "openai/gpt-oss-120b"
-MAX_COMPLETION_TOKENS = 2500
 
 
 class GroqProvider(BaseModelProvider):
 
     def __init__(self):
-        self.client = Groq(
+        self.client = AsyncGroq(
             api_key=settings.groq_api_key
         )
 
@@ -21,10 +19,10 @@ class GroqProvider(BaseModelProvider):
         messages: list[dict[str, str]],
     ) -> str:
 
-        response = self.client.chat.completions.create(
+        response = await self.client.chat.completions.create(
             model=MODEL_NAME,
             messages=messages,
-            max_completion_tokens=MAX_COMPLETION_TOKENS,
+            max_completion_tokens=settings.model_max_completion_tokens,
         )
 
         return response.choices[0].message.content or ""
@@ -34,19 +32,14 @@ class GroqProvider(BaseModelProvider):
         messages: list[dict[str, str]],
     ) -> AsyncGenerator[str, None]:
 
-        loop = asyncio.get_event_loop()
-
-        stream = await loop.run_in_executor(
-            None,
-            lambda: self.client.chat.completions.create(
-                model=MODEL_NAME,
-                messages=messages,
-                max_completion_tokens=MAX_COMPLETION_TOKENS,
-                stream=True,
-            ),
+        stream = await self.client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=messages,
+            max_completion_tokens=settings.model_max_completion_tokens,
+            stream=True,
         )
 
-        for chunk in stream:
+        async for chunk in stream:
 
             delta = chunk.choices[0].delta.content
 

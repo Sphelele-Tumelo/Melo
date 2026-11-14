@@ -1,14 +1,11 @@
 import { create } from "zustand";
 import { createConversation, getConversations } from "../api/conversation";
-import { getMessages, streamMessage } from "../api/message";
+import { getMessages, StreamError, streamMessage } from "../api/message";
 import { deleteConversation as deleteConversationApi } from "../api/conversation.ts";
 import type { Conversation } from "../api/conversation";
+import type { Message, MeloActivity, WebSource } from "../api/message";
 import { updateConversation } from "../api/conversation.ts";
 import { createTypewriter } from "../utils/typewriter";
-import type {
-  Message,
-  MeloActivity,
-} from "../api/message";
 
 interface ChatState {
   conversations: Conversation[];
@@ -16,6 +13,7 @@ interface ChatState {
   activeConversationId: string | null;
   isLoadingConversations: boolean;
   isLoadingMessages: boolean;
+  isGenerating: boolean;
   activity: MeloActivity;
   isThinking: boolean;
   error: string | null;
@@ -38,6 +36,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   activeConversationId: null,
   isLoadingConversations: false,
   isLoadingMessages: false,
+  isGenerating: false,
   isThinking: false,
   error: null,
   activity: "idle",
@@ -136,6 +135,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     const assistantMsg: Message = {
       id: tempAssistantId,
+      clientId: tempAssistantId,
       conversation_id: conversationId,
       role: "assistant",
       content: "",
@@ -143,99 +143,95 @@ export const useChatStore = create<ChatState>((set, get) => ({
     };
 
     const abortController = new AbortController();
-
+    let finalMessageId: string | null = null;
+    
     set((state) => ({
+      messages: [...state.messages, userMsg, assistantMsg],
       isThinking: true,
-      activity: "preparing_answer",
+      isGenerating: true,
       error: null,
       currentAbortController: abortController,
-      messages: [...state.messages, userMsg, assistantMsg],
     }));
-
-    const typewriter = createTypewriter((revealedText) => {
-      set((state) => ({
-        isThinking: false,
-        messages: state.messages.map((msg) =>
-          msg.id === tempAssistantId ? { ...msg, content: revealedText } : msg
-        ),
-      }));
-    });
+    
+    const typewriter = createTypewriter(
+      (revealedText) => {
+        set((state) => ({
+          isThinking: false,
+          messages: state.messages.map((msg) =>
+            msg.id === tempAssistantId
+              ? { ...msg, content: revealedText }
+              : msg
+          ),
+        }));
+      },
+      () => {
+        // fully revealed: swap in the real id and finish
+        set((state) => ({
+          isThinking: false,
+          isGenerating: false,
+          activity: "idle",
+          currentAbortController: null,
+          messages: state.messages.map((msg) =>
+            msg.id === tempAssistantId && finalMessageId
+              ? { ...msg, id: finalMessageId }
+              : msg
+          ),
+        }));
+      },
+    );
 
     try {
       await streamMessage(
         conversationId,
         content,
-        (chunk) => {
-          typewriter.push(chunk);
-        },
-        (finalMessageId) => {
+        (chunk) => typewriter.push(chunk),
+        (id) => {
+          finalMessageId = id;
           typewriter.finish();
-
-          const checkDone = setInterval(() => {
-            if (typewriter.isDone()) {
-              clearInterval(checkDone);
-              set((state) => ({
-                isThinking: false,
-                activity: "idle",
-                currentAbortController: null,
-                messages: state.messages.map((msg) =>
-                  msg.id === tempAssistantId ? { ...msg, id: finalMessageId } : msg
-                ),
-              }));
-            }
-          }, 20);
         },
         abortController.signal,
         options?.webSearch ?? false,
-
-        (activity) => {
-          set({ activity });
-        },
-        (sources) => {
+        (activity) => set({ activity }),
+        (sources: WebSource[]) =>
           set((state) => ({
             messages: state.messages.map((msg) =>
-              msg.id === tempAssistantId
-                ? { ...msg, sources }
-                : msg
+              msg.clientId === tempAssistantId ? { ...msg, sources } : msg
             ),
-          }));
-        },
+          })),
       );
+      typewriter.finish(); // covers a stream that ends without a "done" event
     } catch (err) {
       typewriter.stop();
-
-      const wasAborted = err instanceof DOMException && err.name === "AbortError";
-
+      const wasAborted =
+        err instanceof DOMException && err.name === "AbortError";
+    
       set((state) => ({
         isThinking: false,
+        isGenerating: false,
         activity: "idle",
         currentAbortController: null,
-        error: wasAborted ? null : "Failed to send message.",
+        error: wasAborted
+          ? null
+          : err instanceof StreamError
+            ? err.message
+            : "Failed to send message.",
         messages: state.messages.map((msg) =>
           msg.id === tempAssistantId
-            ? {
-                ...msg,
-                content: wasAborted
-                  ? ""
-                  : "Sorry, I couldn't finish that response. Please try again.",
-                stopped: wasAborted,
-              }
+            ? { ...msg, stopped: wasAborted }
             : msg
         ),
       }));
     }
   },
-
+  
   stopGeneration: () => {
-    const controller = get().currentAbortController;
-    if (controller) {
-      controller.abort();
-    }
+    get().currentAbortController?.abort();
+    set({ activity: "idle" });
   },
 
   restartConversation: async () => {
     set({ messages: [],
-      activity: "idle", isThinking: false, error: null });
+      activity: "idle", isThinking: false, isGenerating: false, error: null });
   },
 
   clearError: () => set({ error: null }),

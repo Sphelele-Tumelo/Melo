@@ -130,6 +130,7 @@ function AppShell() {
     messages,
     activeConversationId,
     isThinking,
+    isGenerating,
     activity,
     isLoadingMessages,
     createNewConversation,
@@ -337,6 +338,7 @@ function AppShell() {
         <Chats
           messages={messages}
           isThinking={isThinking}
+          isGenerating={isGenerating}
           conversationTitle={
             activeConversation?.title || "Melo"
           }

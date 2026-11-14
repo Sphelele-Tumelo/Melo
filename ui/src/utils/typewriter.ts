@@ -1,73 +1,56 @@
-// utils/typewriter.ts
-
-export function createTypewriter(onUpdate: (revealedText: string) => void) {
+export function createTypewriter(
+  onUpdate: (text: string) => void,
+  onDrained?: () => void,
+) {
   let buffer = "";
   let revealed = "";
-  let isRunning = false;
-  let isFinished = false;
-  let isStopped = false;
+  let running = false;
+  let finished = false;
+  let stopped = false;
+  let drainedCalled = false;
 
-  const CHARS_PER_TICK = 8;
-  const TICK_MS = 8;
-
-  function tick() {
-    if (isStopped) return;
+  function frame() {
+    if (stopped) return;
 
     if (buffer.length === 0) {
-      isRunning = false;
-      return;
-    }
-
-    const next = buffer.slice(0, CHARS_PER_TICK);
-    buffer = buffer.slice(CHARS_PER_TICK);
-    revealed += next;
-
-    onUpdate(revealed);
-
-    if (buffer.length === 0) {
-      isRunning = false;
-      if (!isFinished) {
-        return;
+      running = false;
+      if (finished && !drainedCalled) {
+        drainedCalled = true;
+        onDrained?.();
       }
       return;
     }
 
-    setTimeout(tick, TICK_MS);
+    // Far behind -> reveal more per frame; live trickle -> steady 2 chars
+    const n = Math.max(2, Math.ceil(buffer.length / 20));
+    revealed += buffer.slice(0, n);
+    buffer = buffer.slice(n);
+    onUpdate(revealed);
+
+    requestAnimationFrame(frame);
   }
 
-  function push(chunk: string) {
-    if (isStopped || isFinished) return;
-    buffer += chunk;
-    if (!isRunning) {
-      isRunning = true;
-      tick();
+  function ensureRunning() {
+    if (!running && !stopped) {
+      running = true;
+      requestAnimationFrame(frame);
     }
   }
 
-  function finish() {
-    isFinished = true;
-
-    if (isStopped || buffer.length === 0) {
-      return;
-    }
-
-    if (!isRunning) {
-      isRunning = true;
-      tick();
-    }
-  }
-
-  function stop() {
-    isStopped = true;
-    isRunning = false;
-    buffer = "";
-    revealed = "";
-    isFinished = false;
-  }
-
-  function isDone() {
-    return isFinished && buffer.length === 0 && !isRunning;
-  }
-
-  return { push, finish, stop, isDone };
+  return {
+    push(chunk: string) {
+      if (stopped) return;
+      buffer += chunk;
+      ensureRunning();
+    },
+    finish() {
+      finished = true;
+      ensureRunning();
+    },
+    stop() {
+      stopped = true;
+      buffer = "";
+      running = false;
+    },
+  };
 }

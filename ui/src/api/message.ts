@@ -11,6 +11,21 @@ export type MeloActivity =
   | "preparing_answer"
   | "idle";
 
+export type StreamErrorCode = "provider_busy" | "timeout" | "internal";
+
+export class StreamError extends Error {
+  public readonly code: StreamErrorCode;
+
+  constructor(
+    code: StreamErrorCode,
+    message: string,
+  ) {
+    super(message);
+    this.name = "StreamError";
+    this.code = code;
+  }
+}
+
 export interface WebSource {
   id: number;
   title: string;
@@ -22,6 +37,7 @@ export interface WebSource {
 
 export interface Message {
   id: string;
+  clientId?: string;
   conversation_id: string;
   role: MessageRole;
   content: string;
@@ -81,6 +97,8 @@ export async function streamMessage(
 
   let buffer = "";
   let receivedCompletion = false;
+  let receivedTerminal = false;
+  let streamError: StreamError | null = null;
 
   function handleSources(value: unknown) {
     if (!Array.isArray(value)) return;
@@ -99,6 +117,12 @@ export async function streamMessage(
   }
 
   function processEvent(event: string) {
+    const eventType =
+      event
+        .split(/\r?\n/)
+        .find((line) => line.startsWith("event:"))
+        ?.slice(6)
+        .trim() ?? "message";
     const data = event
       .split(/\r?\n/)
       .filter((line) => line.startsWith("data:"))
@@ -109,8 +133,33 @@ export async function streamMessage(
 
     const payload = JSON.parse(data);
 
+    if (eventType === "done") {
+      receivedTerminal = true;
+      if (streamError) return;
+    }
+
+    if (eventType === "error") {
+      const code =
+        payload.code === "provider_busy" ||
+        payload.code === "timeout" ||
+        payload.code === "internal"
+          ? payload.code
+          : "internal";
+      const message =
+        typeof payload.message === "string"
+          ? payload.message
+          : "Melo couldn't finish that response. Please try again.";
+      streamError = new StreamError(code, message);
+      return;
+    }
+
     if (payload.error) {
-      throw new Error(payload.error);
+      receivedTerminal ||= Boolean(payload.done);
+      streamError = new StreamError(
+        "internal",
+        "Melo couldn't finish that response. Please try again.",
+      );
+      return;
     }
 
     // Activity updates, e.g. "searching_web".
@@ -143,6 +192,7 @@ export async function streamMessage(
     }
 
     if (payload.done && !receivedCompletion) {
+      receivedTerminal = true;
       if (typeof payload.message_id !== "string") {
         throw new Error(
           "Streaming response completed without a message ID.",
@@ -177,7 +227,11 @@ export async function streamMessage(
     processEvent(buffer);
   }
 
-  if (!receivedCompletion) {
+  if (streamError) {
+    throw streamError;
+  }
+
+  if (!receivedTerminal || !receivedCompletion) {
     throw new Error(
       "Streaming response ended before Melo finished replying.",
     );

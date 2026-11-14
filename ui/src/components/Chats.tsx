@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import MeloLogo from "./MeloLogo";
+import ThinkingIndicator, { SourcesFooter } from "./ThinkingIndicator";
 import {
   FiArrowUp,
   FiCopy,
@@ -23,6 +24,7 @@ import ComposerTools from "./ComposerTools";
 type ChatsProps = {
   messages: Message[];
   isThinking: boolean;
+  isGenerating: boolean;
   conversationTitle: string;
   onSend: (content: string, options?: 
     { webSearch?: boolean }) => void;
@@ -56,6 +58,7 @@ function IconButton({
 export default function Chats({
   messages,
   isThinking,
+  isGenerating,
   conversationTitle,
   onSend,
   onStop, 
@@ -68,28 +71,11 @@ export default function Chats({
 
   const [liked, setLiked] = useState<boolean | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
-  const [hasStartedResponse, setHasStartedResponse] = useState(false);
   const [voiceMode, setVoiceMode] = useState(false);
-  const [thinkingLabel, setThinkingLabel] = useState("Thinking");
   const [showCatchUp, setShowCatchUp] = useState(false);
 
   const scrollContainerRef = useRef<HTMLElement>(null);
   const shouldAutoScrollRef = useRef(true);
-
-  useEffect(() => {
-    const lastAssistantMessage = [...messages]
-      .reverse()
-      .find((message) => message.role === "assistant");
-
-    if (lastAssistantMessage?.content) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setHasStartedResponse(true);
-    }
-
-    if (!isThinking) {
-      setHasStartedResponse(false);
-    }
-  }, [messages, isThinking]);
 
   useEffect(() => {
     if (!shouldAutoScrollRef.current) return;
@@ -131,52 +117,8 @@ export default function Chats({
 
     shouldAutoScrollRef.current = nearBottom;
 
-    setShowCatchUp(!nearBottom && isThinking);
+    setShowCatchUp(!nearBottom && isGenerating);
   }
-
-  useEffect(() => {
-    if (!isThinking) return;
-
-    const activityLabels: Record<MeloActivity, string[]> = {
-      searching_web: ["Searching the web..."],
-      searching_memories: ["Remembering..."],
-      reading_sources: ["Reading sources..."],
-      preparing_answer: ["Preparing answer..."],
-      idle: [
-        "Thinking...",
-        "Noodling",
-        "Mulling over",
-        "Pondering",
-        "Ruminating",
-        "Cogitating",
-        "Contemplating",
-        "Speculating",
-        "Deliberating",
-        "Reflecting",
-        "Meditating",
-        "Brooding",
-        "Analyzing",
-        "Evaluating",
-        "Judging",
-        "Scrutinizing",
-        "Examining",
-        "Investigating",
-      ],
-    };
-
-    const thinkingLabels = activityLabels[activity] ?? activityLabels.idle;
-
-    let labelIndex = 0;
-
-    setThinkingLabel(thinkingLabels[0]);
-
-    const interval = window.setInterval(() => {
-      labelIndex = (labelIndex + 1) % thinkingLabels.length;
-      setThinkingLabel(thinkingLabels[labelIndex]);
-    }, 1500);
-
-    return () => window.clearInterval(interval);
-  }, [activity, isThinking]);
 
   async function copyMessage(message: Message) {
     await navigator.clipboard?.writeText(message.content);
@@ -296,7 +238,7 @@ export default function Chats({
 
                 return (
                   <motion.article
-                    key={message.id}
+                    key={message.clientId ?? message.id}
                     initial={{
                       opacity: 0,
                       y: 18,
@@ -364,9 +306,10 @@ export default function Chats({
                         }
                       >
                         {isAssistant ? (
-                          isThinking && isLatestAssistant ? (
+                          isGenerating && isLatestAssistant ? (
                             <div className="min-w-0 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
                               {message.content}
+                              <span className="melo-caret" aria-hidden="true" />
                             </div>
                           ) : (
                             <div className="min-w-0 max-w-full overflow-hidden">
@@ -379,24 +322,12 @@ export default function Chats({
                       </div>
 
 
-                    {message.role === "assistant" &&
-                     message.sources &&
-                     message.sources.length > 0 && (
-                       <div className="mt-3 flex flex-wrap gap-2">
-                         {message.sources.map((source) => (
-                           <a
-                             key={`${source.id}-${source.url}`}
-                             href={source.url}
-                             target="_blank"
-                             rel="noopener noreferrer"
-                             className="rounded-lg border px-3 py-2 text-sm hover:opacity-80"
-                           >
-                             [{source.id}] {source.title}
-                             <span aria-hidden="true">↗</span>
-                           </a>
-                         ))}
-                       </div>
-                     )}
+                    {isAssistant &&
+                      !(isGenerating && isLatestAssistant) &&
+                      message.sources &&
+                      message.sources.length > 0 && (
+                        <SourcesFooter sources={message.sources} />
+                      )}
                       
 
                       {/* ACTIONS */}
@@ -527,63 +458,12 @@ export default function Chats({
 
           {/* THINKING */}
           <AnimatePresence>
-            {isThinking && !hasStartedResponse && (
-              <motion.div
-                initial={{
-                  opacity: 0,
-                  y: 10,
-                }}
-                animate={{
-                  opacity: 1,
-                  y: 0,
-                }}
-                exit={{
-                  opacity: 0,
-                  y: -8,
-                }}
-                className="flex min-w-0 items-center gap-3"
-              >
-                <MeloLogo
-                  isThinking
-                  label="Melo is thinking"
-                  className="h-9 w-9 shrink-0"
-                />
-
-                <AnimatePresence mode="wait">
-                  <motion.span
-                    key={thinkingLabel}
-                    initial={{
-                      opacity: 0,
-                      y: 5,
-                    }}
-                    animate={{
-                      opacity: 1,
-                      y: 0,
-                    }}
-                    exit={{
-                      opacity: 0,
-                      y: -5,
-                    }}
-                    className="min-w-0 text-[13px] font-medium text-[#8A8F98]"
-                  >
-                    {thinkingLabel}
-
-                    <span className="inline-block w-6 text-left">
-                      <motion.span
-                        animate={{
-                          opacity: [0, 1, 0],
-                        }}
-                        transition={{
-                          duration: 1.2,
-                          repeat: Infinity,
-                        }}
-                      >
-                        ...
-                      </motion.span>
-                    </span>
-                  </motion.span>
-                </AnimatePresence>
-              </motion.div>
+            {isThinking && (
+              <ThinkingIndicator
+                key="thinking"
+                activity={activity}
+                sources={lastAssistantMessage?.sources ?? []}
+              />
             )}
           </AnimatePresence>
         </div>
@@ -664,7 +544,7 @@ export default function Chats({
            <FiMic className="h-4 w-4" />
          </button>
        
-         {isThinking ? (
+         {isGenerating ? (
            <button
              type="button"
              aria-label="Stop generating"
