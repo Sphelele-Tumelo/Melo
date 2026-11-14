@@ -1,5 +1,6 @@
 
 import os
+import logging
 import re
 from urllib.parse import urlparse
 
@@ -8,6 +9,12 @@ import httpx
 TOOLS_URL = os.getenv(
     "NEOMIND_TOOLS_URL",
     "http://localhost:8000",
+)
+logger = logging.getLogger(__name__)
+SEARCH_UNAVAILABLE_NOTE = (
+    "WEB SEARCH: attempted but unavailable right now. Do not guess at current "
+    "events or recent facts. Tell the user search isn't working at the "
+    "moment."
 )
 
 CURRENT_INFORMATION_REQUEST = re.compile(
@@ -67,6 +74,8 @@ async def fetch_web_context(
     budget_seconds: float = 8.0,
 ) -> tuple[str, list[dict]]:
     """Return prompt context and structured citation sources."""
+    target_url = f"{TOOLS_URL.rstrip('/')}/tools/search"
+    status_code: int | str = "unknown"
 
     try:
         async with httpx.AsyncClient(
@@ -74,17 +83,25 @@ async def fetch_web_context(
             follow_redirects=True,
         ) as client:
             response = await client.get(
-                f"{TOOLS_URL.rstrip('/')}/tools/search",
+                target_url,
                 params={"q": query, "limit": limit},
             )
+            status_code = response.status_code
             response.raise_for_status()
             data = response.json()
 
         results = data.get("results", [])
 
     except Exception as exc:
-        print(f"🌐 WEB SEARCH FAILED: {exc!r}", flush=True)
-        return "", []
+        if isinstance(exc, httpx.TimeoutException):
+            status_code = "timeout"
+        logger.warning(
+            "Web search unavailable status_code=%s target_url=%s error_type=%s",
+            status_code,
+            target_url,
+            type(exc).__name__,
+        )
+        return SEARCH_UNAVAILABLE_NOTE, []
 
     sources = []
 
@@ -109,7 +126,7 @@ async def fetch_web_context(
             break
 
     if not sources:
-        return "", []
+        return SEARCH_UNAVAILABLE_NOTE, []
 
     lines = [
         f"[{source['id']}] {source['title']}\n"
